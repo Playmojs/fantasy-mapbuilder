@@ -1,7 +1,6 @@
-mod project_state;
 use std::collections::HashMap;
 
-use project_state::{Map, MapId, MapInfo, Marker, ProjectState};
+use common::project_state::{Map, MapId, MapInfo, Marker, ProjectState};
 use ggez::{
     event,
     glam::*,
@@ -19,10 +18,19 @@ impl MainState {
         let image = graphics::Image::from_path(ctx, "/map.jpg")?;
 
         let mut maps = HashMap::<MapId, Map>::new();
-        let map = Map{ markers: Vec::new(), map_info: MapInfo{ content: "".to_string()}, image: "assets/map.jpg".to_string() };
-        maps.insert(MapId{0: 0}, map);
+        let map = Map {
+            markers: Vec::new(),
+            map_info: MapInfo {
+                content: "".to_string(),
+            },
+            image: "assets/map.jpg".to_string(),
+        };
+        maps.insert(MapId { 0: 0 }, map);
 
-        Ok( MainState{ image, project_state: ProjectState{maps} })
+        Ok(MainState {
+            image,
+            project_state: ProjectState { maps },
+        })
     }
 }
 
