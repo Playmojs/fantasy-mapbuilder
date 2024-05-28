@@ -4,6 +4,15 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct ProjectState {
     pub maps: HashMap<MapId, Map>,
+    pub current_map: MapId,
+    pub previous_map: MapId,
+}
+
+impl ProjectState {
+    pub fn current_map(&self) -> &Map
+    {
+        return self.maps.get(&self.current_map).unwrap();
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -13,8 +22,16 @@ pub struct Map{
     pub image: String,
 }
 
-#[derive(Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct MapId(pub u64);
+
+impl MapId{
+    pub fn new(raw: u64)->Self{
+        Self{
+            0: raw,
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Marker{
