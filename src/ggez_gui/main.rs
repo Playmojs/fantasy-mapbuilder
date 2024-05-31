@@ -1,9 +1,10 @@
 use std::{
     collections::{hash_map::Entry, HashMap},
     marker,
+    path::Path,
 };
 mod config;
-use common::project_state::{self, Map, MapId, MapInfo, Marker, MarkerId, Position, ProjectState};
+use common::project_state::ProjectState;
 use config::MARKER_SIZE;
 use ggez::{
     context::Has,
@@ -23,52 +24,9 @@ struct MainState {
 
 impl MainState {
     fn new(_ctx: &mut Context) -> GameResult<Self> {
-        let mut maps = HashMap::<MapId, Map>::new();
-        let mut map0 = Map {
-            markers: HashMap::new(),
-            map_info: MapInfo {
-                content: "".to_string(),
-            },
-            image: "/map.jpg".to_string(),
-        };
-        map0.markers.insert(
-            MarkerId::new(0),
-            Marker {
-                map_id: MapId::new(1),
-                position: Position { x: 875.2, y: 860.0 },
-                image: "/marker.png".to_string(),
-            },
-        );
-
-        let mut map1 = Map {
-            markers: HashMap::new(),
-            map_info: MapInfo {
-                content: "".to_string(),
-            },
-            image: "/map.jpg".to_string(),
-        };
-        map1.markers.insert(
-            MarkerId::new(1),
-            Marker {
-                map_id: MapId::new(0),
-                position: Position {
-                    x: 1290.0,
-                    y: 530.0,
-                },
-                image: "/marker.png".to_string(),
-            },
-        );
-
-        maps.insert(MapId::new(0), map0);
-        maps.insert(MapId::new(1), map1);
-
         Ok(MainState {
             images: HashMap::new(),
-            project_state: ProjectState {
-                maps,
-                current_map: MapId(0),
-                map_history_stack: Vec::new(),
-            },
+            project_state: ProjectState::load(Path::new("./Projects/test")),
         })
     }
     fn get_image(&mut self, ctx: &Context, path: &String) -> &graphics::Image {
@@ -80,23 +38,24 @@ impl MainState {
 
 impl event::EventHandler<ggez::GameError> for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
+        let project_dir: &Path = Path::new("./Projects/test");
         let position: Vec2 = ctx.mouse.position().into();
-        let map = self
-            .project_state
-            .maps
-            .get(&self.project_state.current_map)
-            .unwrap();
+        let map = self.project_state.current_map();
 
         if ctx.mouse.button_just_released(event::MouseButton::Left) {
-            println!("len");
-            if let Some((_, hovered_marker)) = map.markers.iter().find(|(_, marker)| {
-                (Vec2::new(marker.position.x, marker.position.y) - position).length() < MARKER_SIZE
-            }) {
-                println!("Clicked, new_map_id {:?}", hovered_marker.map_id.clone());
+            if let Some(map_id) = map
+                .markers
+                .iter()
+                .find(|(_, marker)| {
+                    (Vec2::new(marker.position.x, marker.position.y) - position).length()
+                        < MARKER_SIZE
+                })
+                .map(|(_, hovered_marker)| hovered_marker.map_id.clone())
+            {
                 self.project_state
                     .map_history_stack
                     .push(self.project_state.current_map.clone());
-                self.project_state.current_map = hovered_marker.map_id.clone();
+                self.project_state.current_map = map_id.clone();
             }
         }
         if ctx
@@ -106,6 +65,12 @@ impl event::EventHandler<ggez::GameError> for MainState {
             if let Some(previous) = self.project_state.map_history_stack.pop() {
                 self.project_state.current_map = previous;
             }
+        }
+        if ctx
+            .keyboard
+            .is_key_just_pressed(ggez::input::keyboard::KeyCode::S)
+        {
+            self.project_state.save(project_dir)
         }
 
         Ok(())

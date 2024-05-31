@@ -1,5 +1,11 @@
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, ffi::OsStr, fs, io::BufReader, path::Path};
+
+use crate::{
+    file_type::{get_file_type, get_filename, FileType},
+    ids::*,
+};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct ProjectState {
@@ -17,13 +23,14 @@ impl ProjectState {
         return self.maps.get(&self.current_map).unwrap();
     }
     pub fn load(project_dir: &Path) -> Self {
-        let maps: HashMap<_, _> = project_dir
-            .into_iter()
+        let maps: HashMap<_, _> = std::fs::read_dir(project_dir)
+            .unwrap()
             .filter_map(|file_path| {
-                let FileType::Map(id) = get_filetype(file_path) else {
+                let file_path = file_path.unwrap().path();
+                let Some(FileType::Map(id)) = get_file_type(&file_path) else {
                     return None;
                 };
-                let map = Map::load(project_dir, Path::new(file_path))?;
+                let map = Map::load(project_dir, &file_path).unwrap();
                 Some((id, map))
             })
             .collect();
@@ -38,39 +45,10 @@ impl ProjectState {
             map.save(
                 project_dir,
                 project_dir
-                    .with_file_name(&get_filename(FileType::Map(map_id.clone())))
+                    .join(&get_filename(FileType::Map(map_id.clone())))
                     .as_path(),
             );
         }
-    }
-}
-
-pub enum FileType {
-    Map(MapId),
-    Marker(MarkerId),
-    None,
-}
-
-pub fn get_filetype(file_path: &OsStr) -> FileType {
-    let cow = file_path.to_string_lossy();
-    let mut file_name_iter = cow.split("-");
-    match (
-        file_name_iter.next(),
-        file_name_iter
-            .next()
-            .and_then(|id_string| id_string.parse::<u64>().ok()),
-    ) {
-        (Some("map"), Some(id)) => FileType::Map(MapId::new(id)),
-        (Some("marker"), Some(id)) => FileType::Marker(MarkerId::new(id)),
-        _ => FileType::None,
-    }
-}
-
-pub fn get_filename(filetype: FileType) -> String {
-    match filetype {
-        FileType::Map(map_id) => format!("map-{}.json", map_id.0),
-        FileType::Marker(marker_id) => format!("marker-{}.json", marker_id.0),
-        FileType::None => panic!(),
     }
 }
 
@@ -82,7 +60,7 @@ pub struct Map {
 
 impl Map {
     pub fn load(project_dir: &Path, file_path: &Path) -> Option<Map> {
-        let map_on_file = MapOnFile::load(file_path)?;
+        let map_on_file = MapOnFile::load(file_path).unwrap();
         Some(Self {
             markers: map_on_file
                 .marker_ids
@@ -92,9 +70,10 @@ impl Map {
                         marker_id.clone(),
                         Marker::load(
                             project_dir
-                                .with_file_name(&get_filename(FileType::Marker(marker_id)))
+                                .join(&get_filename(FileType::Marker(marker_id)))
                                 .as_path(),
-                        )?,
+                        )
+                        .unwrap(),
                     ))
                 })
                 .collect(),
@@ -105,9 +84,9 @@ impl Map {
 
     pub fn save(&self, project_dir: &Path, file_path: &Path) {
         for (marker_id, marker) in &self.markers {
-            _ = marker.save(
+            marker.save(
                 project_dir
-                    .with_file_name(&get_filename(FileType::Marker(marker_id.clone())))
+                    .join(&get_filename(FileType::Marker(marker_id.clone())))
                     .as_path(),
             );
         }
@@ -123,16 +102,15 @@ impl Map {
 
 impl MapOnFile {
     pub fn load(file_path: &Path) -> Option<MapOnFile> {
-        let file = fs::File::open(file_path).ok()?;
+        let file = fs::File::open(file_path).ok().unwrap();
         let buf_reader = std::io::BufReader::new(file);
-        serde_json::from_reader(buf_reader).ok()
+        Some(serde_json::from_reader(buf_reader).unwrap())
     }
 
-    pub fn save(&self, file_path: &Path) -> Result<(), std::io::Error> {
-        let file = fs::File::create(file_path)?;
+    pub fn save(&self, file_path: &Path) {
+        let file = fs::File::create(file_path).unwrap();
         let buf_writer = std::io::BufWriter::new(file);
-        serde_json::to_writer(buf_writer, &self);
-        Ok(())
+        serde_json::to_writer(buf_writer, &self).unwrap();
     }
 }
 
@@ -143,22 +121,6 @@ pub struct MapOnFile {
     pub image: String,
 }
 
-macro_rules! define_id {
-    ($name:ident) => {
-        #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Default)]
-        pub struct $name(pub u64);
-
-        impl $name {
-            pub fn new(raw: u64) -> Self {
-                Self(raw)
-            }
-        }
-    };
-}
-
-define_id!(MapId);
-define_id!(MarkerId);
-
 #[derive(Serialize, Deserialize)]
 pub struct Marker {
     pub map_id: MapId,
@@ -168,15 +130,14 @@ pub struct Marker {
 
 impl Marker {
     pub fn load(file_path: &Path) -> Option<Self> {
-        let file = fs::File::open(file_path).ok()?;
+        let file = fs::File::open(file_path).ok().unwrap();
         let buf_reader = std::io::BufReader::new(file);
-        serde_json::from_reader(buf_reader).ok()
+        Some(serde_json::from_reader(buf_reader).unwrap())
     }
-    pub fn save(&self, file_path: &Path) -> Result<(), std::io::Error> {
-        let file = fs::File::create(file_path)?;
+    pub fn save(&self, file_path: &Path) {
+        let file = fs::File::create(file_path).unwrap();
         let buf_writer = std::io::BufWriter::new(file);
-        serde_json::to_writer(buf_writer, &self);
-        Ok(())
+        serde_json::to_writer(buf_writer, &self).unwrap();
     }
 }
 
