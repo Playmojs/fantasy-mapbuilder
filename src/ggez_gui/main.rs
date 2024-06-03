@@ -88,7 +88,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 self.cameras
                     .get_transform(&Camera::Map)
                     .unwrap()
-                    .set_limits(get_screen_size(ctx.gfx.drawable_size()), image_size)
+                    .set_limits(&ctx.gfx.drawable_size(), &image_size)
                     .zoom_out();
             }
         }
@@ -148,7 +148,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
     fn mouse_wheel_event(&mut self, ctx: &mut Context, _x: f32, y: f32) -> GameResult {
         self.cameras.get_transform(&Camera::Map).unwrap().zoom(
             &(1.0 + y / 10.0),
-            &get_screen_size(ctx.gfx.drawable_size()),
+            &ctx.gfx.drawable_size(),
             &ctx.mouse.position(),
         );
         Ok(())
@@ -165,13 +165,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
         self.cameras
             .get_transform(&Camera::Map)
             .unwrap()
-            .set_limits(
-                mint::Vector2::<f32> {
-                    x: width,
-                    y: height,
-                },
-                image_size,
-            )
+            .set_limits(&(width, height), &image_size)
             .zoom_out();
         Ok(())
     }

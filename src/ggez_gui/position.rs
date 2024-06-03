@@ -7,6 +7,16 @@ pub trait Position {
     fn y(&self) -> f32;
 }
 
+impl Position for (f32, f32) {
+    fn x(&self) -> f32 {
+        self.0
+    }
+
+    fn y(&self) -> f32 {
+        self.1
+    }
+}
+
 impl Position for Point2<f32> {
     fn x(&self) -> f32 {
         self.x

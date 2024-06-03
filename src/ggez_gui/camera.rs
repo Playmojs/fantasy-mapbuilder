@@ -103,18 +103,18 @@ impl Transform {
         self
     }
 
-    pub fn set_limits(
+    pub fn set_limits<P: Position, T: Position>(
         &mut self,
-        window_size: mint::Vector2<f32>,
-        image_size: mint::Vector2<f32>,
+        window_size: &P,
+        image_size: &T,
     ) -> &mut Self {
-        self.scale_min = (window_size.x / image_size.x).max(window_size.y / image_size.y);
+        self.scale_min = (window_size.x() / image_size.x()).max(window_size.y() / image_size.y());
         self.scale_max = self.scale_max * 5.0;
 
         self.dest_max = mint::Point2 { x: 0.0, y: 0.0 };
         self.dest_min = mint::Point2 {
-            x: (window_size.x - self.scale_min * image_size.x).min(0.0),
-            y: (window_size.y - self.scale_min * image_size.y).min(0.0),
+            x: (window_size.x() - self.scale_min * image_size.x()).min(0.0),
+            y: (window_size.y() - self.scale_min * image_size.y()).min(0.0),
         };
         self
     }
