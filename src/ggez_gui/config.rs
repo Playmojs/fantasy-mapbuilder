@@ -1,1 +1,1 @@
-pub const MARKER_SIZE: f32 = 100.0;
+pub const MARKER_SIZE: f32 = 40.0;

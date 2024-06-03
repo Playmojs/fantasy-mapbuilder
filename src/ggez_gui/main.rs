@@ -20,6 +20,7 @@ use serde_json::{from_slice, map::OccupiedEntry};
 use slint::Image;
 
 mod camera;
+mod position;
 
 fn get_image_size(image: &graphics::Image) -> mint::Vector2<f32> {
     mint::Vector2::<f32> {
@@ -80,6 +81,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     .push(self.project_state.current_map.clone());
                 self.project_state.current_map = map_id.clone();
 
+                // Is there a way to avoid copying this each time? Rust gives me borrow errors...
                 let image_size = get_image_size(
                     self.get_image(ctx, &self.project_state.current_map().image.clone()),
                 );
@@ -109,7 +111,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
             self.cameras
                 .get_transform(&Camera::Map)
                 .unwrap()
-                .pan(ctx.mouse.delta())
+                .pan(&ctx.mouse.delta())
         }
 
         Ok(())
@@ -143,12 +145,34 @@ impl event::EventHandler<ggez::GameError> for MainState {
         Ok(())
     }
 
-    fn mouse_wheel_event(&mut self, ctx: &mut Context, x: f32, y: f32) -> GameResult {
+    fn mouse_wheel_event(&mut self, ctx: &mut Context, _x: f32, y: f32) -> GameResult {
         self.cameras.get_transform(&Camera::Map).unwrap().zoom(
-            1.0 + y / 10.0,
-            get_screen_size(ctx.gfx.drawable_size()),
-            ctx.mouse.position(),
+            &(1.0 + y / 10.0),
+            &get_screen_size(ctx.gfx.drawable_size()),
+            &ctx.mouse.position(),
         );
+        Ok(())
+    }
+
+    fn resize_event(
+        &mut self,
+        ctx: &mut Context,
+        width: f32,
+        height: f32,
+    ) -> Result<(), ggez::GameError> {
+        let image_size =
+            get_image_size(self.get_image(ctx, &self.project_state.current_map().image.clone()));
+        self.cameras
+            .get_transform(&Camera::Map)
+            .unwrap()
+            .set_limits(
+                mint::Vector2::<f32> {
+                    x: width,
+                    y: height,
+                },
+                image_size,
+            )
+            .zoom_out();
         Ok(())
     }
 }

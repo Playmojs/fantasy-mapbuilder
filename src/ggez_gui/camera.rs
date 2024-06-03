@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use ggez::{graphics, mint};
+use ggez::mint;
+
+use crate::position::Position;
 
 pub struct Cameras {
     pub cameras: HashMap<Camera, Transform>,
@@ -39,33 +41,35 @@ impl Cameras {
         }
     }
 
-    pub fn transform_position(
-        &self,
-        key: &Camera,
-        position: &mint::Point2<f32>,
-    ) -> mint::Point2<f32> {
+    pub fn transform_position<P: Position>(&self, key: &Camera, position: &P) -> mint::Point2<f32> {
         if let Some(transform) = self.cameras.get(key) {
             mint::Point2::<f32> {
-                x: position.x * transform.scale + transform.dest.x,
-                y: position.y * transform.scale + transform.dest.y,
+                x: position.x() * transform.scale + transform.dest.x,
+                y: position.y() * transform.scale + transform.dest.y,
             }
         } else {
-            *position
+            mint::Point2::<f32> {
+                x: position.x(),
+                y: position.y(),
+            }
         }
     }
 
-    pub fn inv_transform_position(
+    pub fn inv_transform_position<P: Position>(
         &self,
         key: &Camera,
-        position: &mint::Point2<f32>,
+        position: &P,
     ) -> mint::Point2<f32> {
         if let Some(transform) = self.cameras.get(key) {
             mint::Point2::<f32> {
-                x: (position.x - transform.dest.x) / transform.scale,
-                y: (position.y - transform.dest.y) / transform.scale,
+                x: (position.x() - transform.dest.x) / transform.scale,
+                y: (position.y() - transform.dest.y) / transform.scale,
             }
         } else {
-            *position
+            mint::Point2::<f32> {
+                x: position.x(),
+                y: position.y(),
+            }
         }
     }
 }
@@ -115,16 +119,16 @@ impl Transform {
         self
     }
 
-    pub fn pan(&mut self, movement: mint::Point2<f32>) {
-        self.dest.x = (self.dest.x + movement.x).clamp(self.dest_min.x, self.dest_max.x);
-        self.dest.y = (self.dest.y + movement.y).clamp(self.dest_min.y, self.dest_max.y);
+    pub fn pan<P: Position>(&mut self, movement: &P) {
+        self.dest.x = (self.dest.x + movement.x()).clamp(self.dest_min.x, self.dest_max.x);
+        self.dest.y = (self.dest.y + movement.y()).clamp(self.dest_min.y, self.dest_max.y);
     }
 
-    pub fn zoom(
+    pub fn zoom<P: Position, T: Position>(
         &mut self,
-        zoom_increment: f32,
-        window_size: mint::Vector2<f32>,
-        zoom_target: mint::Point2<f32>,
+        zoom_increment: &f32,
+        window_size: &P,
+        zoom_target: &T,
     ) {
         let prev_scale = self.scale;
         self.scale = (self.scale * zoom_increment).clamp(self.scale_min, self.scale_max);
@@ -132,13 +136,13 @@ impl Transform {
         let scale_ratio = self.scale / prev_scale;
 
         self.dest_min.x =
-            (window_size.x - (window_size.x - self.dest_min.x) * scale_ratio).min(0.0);
+            (window_size.x() - (window_size.x() - self.dest_min.x()) * scale_ratio).min(0.0);
         self.dest_min.y =
-            (window_size.y - (window_size.y - self.dest_min.y) * scale_ratio).min(0.0);
+            (window_size.y() - (window_size.y() - self.dest_min.y()) * scale_ratio).min(0.0);
 
-        self.dest.x = (-(zoom_target.x - self.dest.x) * scale_ratio + zoom_target.x)
-            .clamp(self.dest_min.x, self.dest_max.x);
-        self.dest.y = (-(zoom_target.y - self.dest.y) * scale_ratio + zoom_target.y)
-            .clamp(self.dest_min.y, self.dest_max.y);
+        self.dest.x = (-(zoom_target.x() - self.dest.x()) * scale_ratio + zoom_target.x())
+            .clamp(self.dest_min.x(), self.dest_max.x());
+        self.dest.y = (-(zoom_target.y() - self.dest.y()) * scale_ratio + zoom_target.y())
+            .clamp(self.dest_min.y(), self.dest_max.y());
     }
 }
