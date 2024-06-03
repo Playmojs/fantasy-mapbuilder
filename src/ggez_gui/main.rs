@@ -1,13 +1,15 @@
 use std::{
+    borrow::Borrow,
     collections::{hash_map::Entry, HashMap},
     marker,
     path::Path,
 };
 mod config;
+use camera::Cameras;
 use common::project_state::ProjectState;
 use config::MARKER_SIZE;
 use ggez::{
-    context::Has,
+    context::{Has, HasMut},
     event::{self, Button},
     glam::Vec2,
     graphics::{self, DrawParam},
@@ -17,16 +19,34 @@ use ggez::{
 use serde_json::{from_slice, map::OccupiedEntry};
 use slint::Image;
 
+mod camera;
+
+fn get_image_size(image: &graphics::Image) -> mint::Vector2<f32> {
+    mint::Vector2::<f32> {
+        x: image.width() as f32,
+        y: image.height() as f32,
+    }
+}
+
+fn get_screen_size(size: (f32, f32)) -> mint::Vector2<f32> {
+    mint::Vector2::<f32> {
+        x: size.0,
+        y: size.1,
+    }
+}
+
 struct MainState {
     images: HashMap<String, graphics::Image>,
     project_state: ProjectState,
+    cameras: Cameras,
 }
 
 impl MainState {
     fn new(_ctx: &mut Context) -> GameResult<Self> {
         Ok(MainState {
-            images: HashMap::new(),
+            images: HashMap::<String, graphics::Image>::new(),
             project_state: ProjectState::load(Path::new("./Projects/test")),
+            cameras: Cameras::setup(),
         })
     }
     fn get_image(&mut self, ctx: &Context, path: &String) -> &graphics::Image {
@@ -39,7 +59,10 @@ impl MainState {
 impl event::EventHandler<ggez::GameError> for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         let project_dir: &Path = Path::new("./Projects/test");
-        let position: Vec2 = ctx.mouse.position().into();
+        let position: Vec2 = self
+            .cameras
+            .inv_transform_position(&"map".to_string(), &ctx.mouse.position())
+            .into();
         let map = self.project_state.current_map();
 
         if ctx.mouse.button_just_released(event::MouseButton::Left) {
@@ -56,6 +79,14 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     .map_history_stack
                     .push(self.project_state.current_map.clone());
                 self.project_state.current_map = map_id.clone();
+                let image_size = get_image_size(
+                    self.get_image(ctx, &self.project_state.current_map().image.clone()),
+                );
+                self.cameras
+                    .get_transform(&"map".to_string())
+                    .unwrap()
+                    .set_limits(get_screen_size(ctx.gfx.drawable_size()), image_size)
+                    .zoom_out();
             }
         }
         if ctx
@@ -73,37 +104,57 @@ impl event::EventHandler<ggez::GameError> for MainState {
             self.project_state.save(project_dir)
         }
 
+        if ctx.mouse.button_pressed(event::MouseButton::Left) {
+            self.cameras
+                .get_transform(&"map".to_string())
+                .unwrap()
+                .pan(ctx.mouse.delta())
+        }
+
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas =
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
-
+        let map_param = self
+            .cameras
+            .get_drawparam(&"map".to_string(), &mint::Point2::<f32> { x: 0.0, y: 0.0 });
         let image = self.get_image(ctx, &self.project_state.current_map().image.clone());
-        canvas.draw(image, graphics::DrawParam::default());
 
-        for (_, marker) in &self
-            .project_state
-            .maps
-            .get(&self.project_state.current_map)
-            .unwrap()
-            .markers
-        {
+        canvas.draw(image, map_param);
+
+        for (_, marker) in &self.project_state.current_map().markers {
             let position = mint::Point2::<f32> {
                 x: marker.position.x,
                 y: marker.position.y,
             };
             canvas.draw(
                 &graphics::Image::from_path(ctx, &marker.image)?,
-                DrawParam::default()
-                    .dest(position)
+                self.cameras
+                    .get_drawparam(&"map".to_string(), &position)
                     .offset(Point2 { x: 0.5, y: 1.0 }),
             );
         }
 
         canvas.finish(ctx)?;
 
+        Ok(())
+    }
+
+    fn mouse_wheel_event(&mut self, ctx: &mut Context, x: f32, y: f32) -> GameResult {
+        let image_size =
+            get_image_size(self.get_image(ctx, &self.project_state.current_map().image.clone()));
+
+        self.cameras
+            .get_transform(&"map".to_string())
+            .unwrap()
+            .zoom(
+                y / 10.0,
+                get_screen_size(ctx.gfx.drawable_size()),
+                image_size,
+                ctx.mouse.position(),
+            );
         Ok(())
     }
 }
