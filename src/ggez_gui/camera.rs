@@ -109,7 +109,7 @@ impl Transform {
         image_size: &T,
     ) -> &mut Self {
         self.scale_min = (window_size.x() / image_size.x()).max(window_size.y() / image_size.y());
-        self.scale_max = self.scale_max * 5.0;
+        self.scale_max = self.scale_min * 5.0;
 
         self.dest_max = mint::Point2 { x: 0.0, y: 0.0 };
         self.dest_min = mint::Point2 {
@@ -132,6 +132,7 @@ impl Transform {
     ) {
         let prev_scale = self.scale;
         self.scale = (self.scale * zoom_increment).clamp(self.scale_min, self.scale_max);
+        println!("Scale: {}", self.scale);
 
         let scale_ratio = self.scale / prev_scale;
 
