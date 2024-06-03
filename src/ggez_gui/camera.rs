@@ -24,10 +24,10 @@ impl Cameras {
         self.cameras.get_mut(key)
     }
 
-    pub fn get_drawparam(
+    pub fn get_drawparam<P: Position>(
         &self,
         key: &Camera,
-        position: &mint::Point2<f32>,
+        position: &P,
     ) -> ggez::graphics::DrawParam {
         if let Some(transform) = self.cameras.get(key) {
             ggez::graphics::DrawParam::default()
