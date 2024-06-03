@@ -124,18 +124,18 @@ impl Transform {
         &mut self,
         zoom_increment: f32,
         window_size: mint::Vector2<f32>,
-        image_size: mint::Vector2<f32>,
         zoom_target: mint::Point2<f32>,
     ) {
         let prev_scale = self.scale;
         self.scale = (self.scale * zoom_increment).clamp(self.scale_min, self.scale_max);
 
-        self.dest_min = mint::Point2 {
-            x: (window_size.x - image_size.x * self.scale).min(0.0),
-            y: (window_size.y - image_size.y * self.scale).min(0.0),
-        };
-
         let scale_ratio = self.scale / prev_scale;
+
+        self.dest_min.x =
+            (window_size.x - (window_size.x - self.dest_min.x) * scale_ratio).min(0.0);
+        self.dest_min.y =
+            (window_size.y - (window_size.y - self.dest_min.y) * scale_ratio).min(0.0);
+
         self.dest.x = (-(zoom_target.x - self.dest.x) * scale_ratio + zoom_target.x)
             .clamp(self.dest_min.x, self.dest_max.x);
         self.dest.y = (-(zoom_target.y - self.dest.y) * scale_ratio + zoom_target.y)

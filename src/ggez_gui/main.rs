@@ -144,13 +144,9 @@ impl event::EventHandler<ggez::GameError> for MainState {
     }
 
     fn mouse_wheel_event(&mut self, ctx: &mut Context, x: f32, y: f32) -> GameResult {
-        let image_size =
-            get_image_size(self.get_image(ctx, &self.project_state.current_map().image.clone()));
-
         self.cameras.get_transform(&Camera::Map).unwrap().zoom(
             1.0 + y / 10.0,
             get_screen_size(ctx.gfx.drawable_size()),
-            image_size,
             ctx.mouse.position(),
         );
         Ok(())
