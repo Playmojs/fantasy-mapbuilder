@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 mod config;
-use camera::Cameras;
+use camera::{Camera, Cameras};
 use common::project_state::ProjectState;
 use config::MARKER_SIZE;
 use ggez::{
@@ -61,7 +61,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let project_dir: &Path = Path::new("./Projects/test");
         let position: Vec2 = self
             .cameras
-            .inv_transform_position(&"map".to_string(), &ctx.mouse.position())
+            .inv_transform_position(&Camera::Map, &ctx.mouse.position())
             .into();
         let map = self.project_state.current_map();
 
@@ -79,11 +79,12 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     .map_history_stack
                     .push(self.project_state.current_map.clone());
                 self.project_state.current_map = map_id.clone();
+
                 let image_size = get_image_size(
                     self.get_image(ctx, &self.project_state.current_map().image.clone()),
                 );
                 self.cameras
-                    .get_transform(&"map".to_string())
+                    .get_transform(&Camera::Map)
                     .unwrap()
                     .set_limits(get_screen_size(ctx.gfx.drawable_size()), image_size)
                     .zoom_out();
@@ -106,7 +107,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
 
         if ctx.mouse.button_pressed(event::MouseButton::Left) {
             self.cameras
-                .get_transform(&"map".to_string())
+                .get_transform(&Camera::Map)
                 .unwrap()
                 .pan(ctx.mouse.delta())
         }
@@ -119,7 +120,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
         let map_param = self
             .cameras
-            .get_drawparam(&"map".to_string(), &mint::Point2::<f32> { x: 0.0, y: 0.0 });
+            .get_drawparam(&Camera::Map, &mint::Point2::<f32> { x: 0.0, y: 0.0 });
         let image = self.get_image(ctx, &self.project_state.current_map().image.clone());
 
         canvas.draw(image, map_param);
@@ -132,7 +133,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
             canvas.draw(
                 &graphics::Image::from_path(ctx, &marker.image)?,
                 self.cameras
-                    .get_drawparam(&"map".to_string(), &position)
+                    .get_drawparam(&Camera::Map, &position)
                     .offset(Point2 { x: 0.5, y: 1.0 }),
             );
         }
@@ -146,15 +147,12 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let image_size =
             get_image_size(self.get_image(ctx, &self.project_state.current_map().image.clone()));
 
-        self.cameras
-            .get_transform(&"map".to_string())
-            .unwrap()
-            .zoom(
-                y / 10.0,
-                get_screen_size(ctx.gfx.drawable_size()),
-                image_size,
-                ctx.mouse.position(),
-            );
+        self.cameras.get_transform(&Camera::Map).unwrap().zoom(
+            1.0 + y / 10.0,
+            get_screen_size(ctx.gfx.drawable_size()),
+            image_size,
+            ctx.mouse.position(),
+        );
         Ok(())
     }
 }

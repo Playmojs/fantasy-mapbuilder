@@ -3,23 +3,28 @@ use std::collections::HashMap;
 use ggez::{graphics, mint};
 
 pub struct Cameras {
-    pub cameras: HashMap<String, Transform>,
+    pub cameras: HashMap<Camera, Transform>,
+}
+
+#[derive(PartialEq, Eq, Hash)]
+pub enum Camera {
+    Map,
 }
 
 impl Cameras {
     pub fn setup() -> Self {
-        let mut cameras: HashMap<String, Transform> = HashMap::new();
-        cameras.insert("map".to_string(), Transform::new());
-        Cameras { cameras: cameras }
+        let mut cameras: HashMap<Camera, Transform> = HashMap::new();
+        cameras.insert(Camera::Map, Transform::new());
+        Cameras { cameras }
     }
 
-    pub fn get_transform(&mut self, key: &String) -> Option<&mut Transform> {
+    pub fn get_transform(&mut self, key: &Camera) -> Option<&mut Transform> {
         self.cameras.get_mut(key)
     }
 
     pub fn get_drawparam(
         &self,
-        key: &String,
+        key: &Camera,
         position: &mint::Point2<f32>,
     ) -> ggez::graphics::DrawParam {
         if let Some(transform) = self.cameras.get(key) {
@@ -36,7 +41,7 @@ impl Cameras {
 
     pub fn transform_position(
         &self,
-        key: &String,
+        key: &Camera,
         position: &mint::Point2<f32>,
     ) -> mint::Point2<f32> {
         if let Some(transform) = self.cameras.get(key) {
@@ -51,7 +56,7 @@ impl Cameras {
 
     pub fn inv_transform_position(
         &self,
-        key: &String,
+        key: &Camera,
         position: &mint::Point2<f32>,
     ) -> mint::Point2<f32> {
         if let Some(transform) = self.cameras.get(key) {
@@ -62,14 +67,6 @@ impl Cameras {
         } else {
             *position
         }
-    }
-
-    pub fn get_dest(&self, key: &String) -> mint::Point2<f32> {
-        self.cameras.get(key).unwrap().dest
-    }
-
-    pub fn get_scale(&self, key: &String) -> f32 {
-        self.cameras.get(key).unwrap().scale
     }
 }
 
@@ -130,16 +127,18 @@ impl Transform {
         image_size: mint::Vector2<f32>,
         zoom_target: mint::Point2<f32>,
     ) {
-        let old_scale = self.scale;
-        self.scale = (self.scale + zoom_increment).clamp(self.scale_min, self.scale_max);
+        let prev_scale = self.scale;
+        self.scale = (self.scale * zoom_increment).clamp(self.scale_min, self.scale_max);
+
         self.dest_min = mint::Point2 {
             x: (window_size.x - image_size.x * self.scale).min(0.0),
             y: (window_size.y - image_size.y * self.scale).min(0.0),
         };
 
-        self.dest.x = (-((zoom_target.x - self.dest.x) / old_scale) * self.scale + zoom_target.x)
+        let scale_ratio = self.scale / prev_scale;
+        self.dest.x = (-(zoom_target.x - self.dest.x) * scale_ratio + zoom_target.x)
             .clamp(self.dest_min.x, self.dest_max.x);
-        self.dest.y = (-((zoom_target.y - self.dest.y) / old_scale) * self.scale + zoom_target.y)
+        self.dest.y = (-(zoom_target.y - self.dest.y) * scale_ratio + zoom_target.y)
             .clamp(self.dest_min.y, self.dest_max.y);
     }
 }
