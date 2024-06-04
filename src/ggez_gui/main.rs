@@ -6,8 +6,8 @@ use std::{
 };
 mod config;
 use camera::{Camera, Cameras};
-use common::project_state::ProjectState;
-use config::MARKER_SIZE;
+use common::{ids::MapId, project_state::ProjectState};
+use config::{MARKER_SIZE, PARENT_MAP_X_RATIO};
 use ggez::{
     context::{Has, HasMut},
     event::{self, Button},
@@ -29,17 +29,11 @@ fn get_image_size(image: &graphics::Image) -> mint::Vector2<f32> {
     }
 }
 
-fn get_screen_size(size: (f32, f32)) -> mint::Vector2<f32> {
-    mint::Vector2::<f32> {
-        x: size.0,
-        y: size.1,
-    }
-}
-
 struct MainState {
     images: HashMap<String, graphics::Image>,
     project_state: ProjectState,
     cameras: Cameras,
+    map_to_draw: MapId,
 }
 
 impl MainState {
@@ -48,6 +42,7 @@ impl MainState {
             images: HashMap::<String, graphics::Image>::new(),
             project_state: ProjectState::load(Path::new("./Projects/test")),
             cameras: Cameras::setup(),
+            map_to_draw: MapId::new(rand::random()),
         })
     }
     fn get_image(&mut self, ctx: &Context, path: &String) -> &graphics::Image {
@@ -60,9 +55,10 @@ impl MainState {
 impl event::EventHandler<ggez::GameError> for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         let project_dir: &Path = Path::new("./Projects/test");
+        let mouse_pos = ctx.mouse.position();
         let position: Vec2 = self
             .cameras
-            .inv_transform_position(&Camera::Map, &ctx.mouse.position())
+            .inv_transform_position(&Camera::Map, &mouse_pos)
             .into();
         let map = self.project_state.current_map();
 
@@ -80,16 +76,34 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     .map_history_stack
                     .push(self.project_state.current_map.clone());
                 self.project_state.current_map = map_id.clone();
-
-                // Is there a way to avoid copying this each time? Rust gives me borrow errors...
-                let image_size = get_image_size(
-                    self.get_image(ctx, &self.project_state.current_map().image.clone()),
+            } else if self.project_state.current_map().parent_id.is_some() {
+                let parent_size = get_image_size(
+                    self.get_image(
+                        ctx,
+                        &self
+                            .project_state
+                            .maps
+                            .get(&self.project_state.current_map().parent_id.as_ref().unwrap())
+                            .unwrap()
+                            .image
+                            .clone(),
+                    ),
                 );
-                self.cameras
-                    .get_transform(&Camera::Map)
-                    .unwrap()
-                    .set_limits(&ctx.gfx.drawable_size(), &image_size)
-                    .zoom_out();
+                if mouse_pos.x <= ctx.gfx.size().0 * PARENT_MAP_X_RATIO
+                    && mouse_pos.y
+                        <= ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x
+                {
+                    self.project_state
+                        .map_history_stack
+                        .push(self.project_state.current_map.clone());
+                    self.project_state.current_map = self
+                        .project_state
+                        .current_map()
+                        .parent_id
+                        .as_ref()
+                        .unwrap()
+                        .clone();
+                }
             }
         }
         if ctx
@@ -109,8 +123,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
 
         if ctx.mouse.button_pressed(event::MouseButton::Left) {
             self.cameras
-                .get_transform(&Camera::Map)
-                .unwrap()
+                .get_transform(Camera::Map)
                 .pan(&ctx.mouse.delta())
         }
 
@@ -120,6 +133,45 @@ impl event::EventHandler<ggez::GameError> for MainState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas =
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
+
+        let parent_id = &self.project_state.current_map().parent_id.clone();
+        if self.map_to_draw != self.project_state.current_map {
+            self.map_to_draw = self.project_state.current_map.clone();
+
+            let image_size = get_image_size(
+                self.get_image(ctx, &self.project_state.current_map().image.clone()),
+            );
+
+            self.cameras
+                .get_transform(Camera::Map)
+                .set_limits(&ctx.gfx.drawable_size(), &image_size)
+                .zoom_out();
+            if parent_id.is_some() {
+                let parent_size = get_image_size(
+                    self.get_image(
+                        ctx,
+                        &self
+                            .project_state
+                            .maps
+                            .get(&parent_id.as_ref().unwrap())
+                            .unwrap()
+                            .image
+                            .clone(),
+                    ),
+                );
+                self.cameras
+                    .get_transform(Camera::ParentMap)
+                    .set_limits(
+                        &(
+                            ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
+                            ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
+                        ),
+                        &parent_size,
+                    )
+                    .zoom_out();
+            }
+        }
+
         let map_param = self
             .cameras
             .get_drawparam(&Camera::Map, &mint::Point2::<f32> { x: 0.0, y: 0.0 });
@@ -140,13 +192,31 @@ impl event::EventHandler<ggez::GameError> for MainState {
             );
         }
 
+        if parent_id.is_some() {
+            let draw_param = self.cameras.get_drawparam(&Camera::ParentMap, &(0.0, 0.0));
+            canvas.draw(
+                self.get_image(
+                    ctx,
+                    &self
+                        .project_state
+                        .maps
+                        .get(&parent_id.as_ref().unwrap())
+                        .unwrap()
+                        .image
+                        .clone(),
+                ),
+                draw_param,
+            );
+        }
+        {}
+
         canvas.finish(ctx)?;
 
         Ok(())
     }
 
     fn mouse_wheel_event(&mut self, ctx: &mut Context, _x: f32, y: f32) -> GameResult {
-        self.cameras.get_transform(&Camera::Map).unwrap().zoom(
+        self.cameras.get_transform(Camera::Map).zoom(
             &(1.0 + y / 10.0),
             &ctx.gfx.drawable_size(),
             &ctx.mouse.position(),
@@ -163,10 +233,33 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let image_size =
             get_image_size(self.get_image(ctx, &self.project_state.current_map().image.clone()));
         self.cameras
-            .get_transform(&Camera::Map)
-            .unwrap()
+            .get_transform(Camera::Map)
             .set_limits(&(width, height), &image_size)
             .zoom_out();
+        if self.project_state.current_map().parent_id.is_some() {
+            let parent_size = get_image_size(
+                self.get_image(
+                    ctx,
+                    &self
+                        .project_state
+                        .maps
+                        .get(&self.project_state.current_map().parent_id.as_ref().unwrap())
+                        .unwrap()
+                        .image
+                        .clone(),
+                ),
+            );
+            self.cameras
+                .get_transform(Camera::ParentMap)
+                .set_limits(
+                    &(
+                        ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
+                        ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
+                    ),
+                    &parent_size,
+                )
+                .zoom_out();
+        }
         Ok(())
     }
 }

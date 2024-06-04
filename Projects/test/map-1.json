@@ -1,1 +1,8 @@
-{"marker_ids":[1],"map_info":{"content":""},"image":"/magil.png"}
+{
+    "marker_ids": [],
+    "map_info": {
+        "content": ""
+    },
+    "image": "/magil.png",
+    "parent_id": 0
+}

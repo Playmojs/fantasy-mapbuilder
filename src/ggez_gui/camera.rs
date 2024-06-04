@@ -8,9 +8,10 @@ pub struct Cameras {
     pub cameras: HashMap<Camera, Transform>,
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub enum Camera {
     Map,
+    ParentMap,
 }
 
 impl Cameras {
@@ -20,8 +21,8 @@ impl Cameras {
         Cameras { cameras }
     }
 
-    pub fn get_transform(&mut self, key: &Camera) -> Option<&mut Transform> {
-        self.cameras.get_mut(key)
+    pub fn get_transform(&mut self, key: Camera) -> &mut Transform {
+        self.cameras.entry(key).or_insert_with(|| Transform::new())
     }
 
     pub fn get_drawparam<P: Position>(
@@ -42,6 +43,8 @@ impl Cameras {
     }
 
     pub fn transform_position<P: Position>(&self, key: &Camera, position: &P) -> mint::Point2<f32> {
+        // Converts position from camera to screen position
+
         if let Some(transform) = self.cameras.get(key) {
             mint::Point2::<f32> {
                 x: position.x() * transform.scale + transform.dest.x,
@@ -56,6 +59,7 @@ impl Cameras {
     }
 
     pub fn inv_transform_position<P: Position>(
+        // Converts position from screen position to camera position
         &self,
         key: &Camera,
         position: &P,
@@ -132,7 +136,6 @@ impl Transform {
     ) {
         let prev_scale = self.scale;
         self.scale = (self.scale * zoom_increment).clamp(self.scale_min, self.scale_max);
-        println!("Scale: {}", self.scale);
 
         let scale_ratio = self.scale / prev_scale;
 

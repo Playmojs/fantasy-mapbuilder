@@ -1605,6 +1605,7 @@ version = "0.1.0"
 dependencies = [
  "ggez",
  "itertools 0.13.0",
+ "rand",
  "serde",
  "serde_json",
  "slint",

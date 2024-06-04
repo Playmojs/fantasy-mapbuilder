@@ -1,11 +1,10 @@
 {
     "marker_ids": [
-        0,
-        1
+        3
     ],
     "map_info": {
         "content": ""
     },
-    "image": "/map.jpg",
-    "parent_id": null
+    "image": "/Invella_forest.jpg",
+    "parent_id": 2
 }
