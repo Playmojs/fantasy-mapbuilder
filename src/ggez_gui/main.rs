@@ -76,23 +76,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     .map_history_stack
                     .push(self.project_state.current_map.clone());
                 self.project_state.current_map = map_id.clone();
-            } else if self.project_state.current_map().parent_id.is_some() {
-                let parent_size = get_image_size(
-                    self.get_image(
-                        ctx,
-                        &self
-                            .project_state
-                            .maps
-                            .get(&self.project_state.current_map().parent_id.as_ref().unwrap())
-                            .unwrap()
-                            .image
-                            .clone(),
-                    ),
-                );
-                if mouse_pos.x <= ctx.gfx.size().0 * PARENT_MAP_X_RATIO
-                    && mouse_pos.y
-                        <= ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x
-                {
+            } else if self.project_state.current_map().parent_id.is_some() && self.cameras.is_within(&Camera::ParentMap, &mouse_pos){
                     self.project_state
                         .map_history_stack
                         .push(self.project_state.current_map.clone());
@@ -103,7 +87,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                         .as_ref()
                         .unwrap()
                         .clone();
-                }
+                
             }
         }
         if ctx
@@ -218,7 +202,6 @@ impl event::EventHandler<ggez::GameError> for MainState {
     fn mouse_wheel_event(&mut self, ctx: &mut Context, _x: f32, y: f32) -> GameResult {
         self.cameras.get_transform(Camera::Map).zoom(
             &(1.0 + y / 10.0),
-            &ctx.gfx.drawable_size(),
             &ctx.mouse.position(),
         );
         Ok(())
