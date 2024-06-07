@@ -76,19 +76,17 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     .map_history_stack
                     .push(self.project_state.current_map.clone());
                 self.project_state.current_map = map_id.clone();
-            } else if self.project_state.current_map().parent_id.is_some() && self.cameras.is_within(&Camera::ParentMap, &mouse_pos){
+            }
+
+            // This is currently buggy - if a marker is beneath the parent of either the current map or the target map, this clause will fail because of the change above.
+            self.project_state.current_map().parent_id.clone()
+                .filter(|_| self.cameras.is_within(&Camera::ParentMap, &mouse_pos))
+                .map(|parent_id|{
                     self.project_state
                         .map_history_stack
                         .push(self.project_state.current_map.clone());
-                    self.project_state.current_map = self
-                        .project_state
-                        .current_map()
-                        .parent_id
-                        .as_ref()
-                        .unwrap()
-                        .clone();
-                
-            }
+                    self.project_state.current_map = parent_id;
+            });
         }
         if ctx
             .keyboard
@@ -118,7 +116,6 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let mut canvas =
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
 
-        let parent_id = &self.project_state.current_map().parent_id.clone();
         if self.map_to_draw != self.project_state.current_map {
             self.map_to_draw = self.project_state.current_map.clone();
 
@@ -130,14 +127,15 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 .get_transform(Camera::Map)
                 .set_limits(&ctx.gfx.drawable_size(), &image_size)
                 .zoom_out();
-            if parent_id.is_some() {
+            
+            self.project_state.current_map().parent_id.clone().map(|parent_id| {
                 let parent_size = get_image_size(
                     self.get_image(
                         ctx,
                         &self
                             .project_state
                             .maps
-                            .get(&parent_id.as_ref().unwrap())
+                            .get(&parent_id)
                             .unwrap()
                             .image
                             .clone(),
@@ -154,7 +152,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     )
                     .zoom_out();
             }
-        }
+        );
+    }
 
         let map_param = self
             .cameras
@@ -176,7 +175,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
             );
         }
 
-        if parent_id.is_some() {
+        self.project_state.current_map().parent_id.clone().map(|parent_id| {
             let draw_param = self.cameras.get_drawparam(&Camera::ParentMap, &(0.0, 0.0));
             canvas.draw(
                 self.get_image(
@@ -184,15 +183,14 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     &self
                         .project_state
                         .maps
-                        .get(&parent_id.as_ref().unwrap())
+                        .get(&parent_id)
                         .unwrap()
                         .image
                         .clone(),
                 ),
                 draw_param,
             );
-        }
-        {}
+        });
 
         canvas.finish(ctx)?;
 
@@ -219,14 +217,14 @@ impl event::EventHandler<ggez::GameError> for MainState {
             .get_transform(Camera::Map)
             .set_limits(&(width, height), &image_size)
             .zoom_out();
-        if self.project_state.current_map().parent_id.is_some() {
+        self.project_state.current_map().parent_id.clone().map(|parent_id| {
             let parent_size = get_image_size(
                 self.get_image(
                     ctx,
                     &self
                         .project_state
                         .maps
-                        .get(&self.project_state.current_map().parent_id.as_ref().unwrap())
+                        .get(&parent_id)
                         .unwrap()
                         .image
                         .clone(),
@@ -242,7 +240,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     &parent_size,
                 )
                 .zoom_out();
-        }
+        });
         Ok(())
     }
 }
