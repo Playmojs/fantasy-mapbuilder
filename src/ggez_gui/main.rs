@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 mod config;
-use camera::{Camera, Cameras};
+use camera::{Camera, CameraId, CameraManager};
 use common::{ids::MapId, project_state::ProjectState};
 use config::{MARKER_SIZE, PARENT_MAP_X_RATIO};
 use ggez::{
@@ -32,7 +32,7 @@ fn get_image_size(image: &graphics::Image) -> mint::Vector2<f32> {
 struct MainState {
     images: HashMap<String, graphics::Image>,
     project_state: ProjectState,
-    cameras: Cameras,
+    camera_manager: CameraManager,
     map_to_draw: MapId,
 }
 
@@ -41,7 +41,7 @@ impl MainState {
         Ok(MainState {
             images: HashMap::<String, graphics::Image>::new(),
             project_state: ProjectState::load(Path::new("./Projects/test")),
-            cameras: Cameras::setup(),
+            camera_manager: CameraManager::setup(),
             map_to_draw: MapId::new(rand::random()),
         })
     }
@@ -57,8 +57,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let project_dir: &Path = Path::new("./Projects/test");
         let mouse_pos = ctx.mouse.position();
         let position: Vec2 = self
-            .cameras
-            .inv_transform_position(&Camera::Map, &mouse_pos)
+            .camera_manager
+            .inv_transform_position(&CameraId::Map, &mouse_pos)
             .into();
         let map = self.project_state.current_map();
 
@@ -80,7 +80,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
 
             // This is currently buggy - if a marker is beneath the parent of either the current map or the target map, this clause will fail because of the change above.
             self.project_state.current_map().parent_id.clone()
-                .filter(|_| self.cameras.is_within(&Camera::ParentMap, &mouse_pos))
+                .filter(|_| self.camera_manager.is_within(&CameraId::ParentMap, &mouse_pos))
                 .map(|parent_id|{
                     self.project_state
                         .map_history_stack
@@ -104,8 +104,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
         }
 
         if ctx.mouse.button_pressed(event::MouseButton::Left) {
-            self.cameras
-                .get_transform(Camera::Map)
+            self.camera_manager
+                .get_camera(CameraId::Map)
                 .pan(&ctx.mouse.delta())
         }
 
@@ -123,8 +123,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 self.get_image(ctx, &self.project_state.current_map().image.clone()),
             );
 
-            self.cameras
-                .get_transform(Camera::Map)
+            self.camera_manager
+                .get_camera(CameraId::Map)
                 .set_limits(&ctx.gfx.drawable_size(), &image_size)
                 .zoom_out();
             
@@ -141,8 +141,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
                             .clone(),
                     ),
                 );
-                self.cameras
-                    .get_transform(Camera::ParentMap)
+                self.camera_manager
+                    .get_camera(CameraId::ParentMap)
                     .set_limits(
                         &(
                             ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
@@ -156,8 +156,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
     }
 
         let map_param = self
-            .cameras
-            .get_drawparam(&Camera::Map, &mint::Point2::<f32> { x: 0.0, y: 0.0 });
+            .camera_manager
+            .get_drawparam(&CameraId::Map, &mint::Point2::<f32> { x: 0.0, y: 0.0 });
         let image = self.get_image(ctx, &self.project_state.current_map().image.clone());
 
         canvas.draw(image, map_param);
@@ -169,14 +169,14 @@ impl event::EventHandler<ggez::GameError> for MainState {
             };
             canvas.draw(
                 &graphics::Image::from_path(ctx, &marker.image)?,
-                self.cameras
-                    .get_drawparam(&Camera::Map, &position)
+                self.camera_manager
+                    .get_drawparam(&CameraId::Map, &position)
                     .offset(Point2 { x: 0.5, y: 1.0 }),
             );
         }
 
         self.project_state.current_map().parent_id.clone().map(|parent_id| {
-            let draw_param = self.cameras.get_drawparam(&Camera::ParentMap, &(0.0, 0.0));
+            let draw_param = self.camera_manager.get_drawparam(&CameraId::ParentMap, &(0.0, 0.0));
             canvas.draw(
                 self.get_image(
                     ctx,
@@ -198,7 +198,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
     }
 
     fn mouse_wheel_event(&mut self, ctx: &mut Context, _x: f32, y: f32) -> GameResult {
-        self.cameras.get_transform(Camera::Map).zoom(
+        self.camera_manager.get_camera(CameraId::Map).zoom(
             &(1.0 + y / 10.0),
             &ctx.mouse.position(),
         );
@@ -213,8 +213,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
     ) -> Result<(), ggez::GameError> {
         let image_size =
             get_image_size(self.get_image(ctx, &self.project_state.current_map().image.clone()));
-        self.cameras
-            .get_transform(Camera::Map)
+        self.camera_manager
+            .get_camera(CameraId::Map)
             .set_limits(&(width, height), &image_size)
             .zoom_out();
         self.project_state.current_map().parent_id.clone().map(|parent_id| {
@@ -230,8 +230,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
                         .clone(),
                 ),
             );
-            self.cameras
-                .get_transform(Camera::ParentMap)
+            self.camera_manager
+                .get_camera(CameraId::ParentMap)
                 .set_limits(
                     &(
                         ctx.gfx.size().0 * PARENT_MAP_X_RATIO,

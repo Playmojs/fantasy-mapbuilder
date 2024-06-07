@@ -4,51 +4,51 @@ use ggez::{mint, winit::window};
 
 use crate::position::Position;
 
-pub struct Cameras {
-    pub cameras: HashMap<Camera, Transform>,
+pub struct CameraManager {
+    pub cameras: HashMap<CameraId, Camera>,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
-pub enum Camera {
+pub enum CameraId {
     Map,
     ParentMap,
 }
 
-impl Cameras {
+impl CameraManager {
     pub fn setup() -> Self {
-        let mut cameras: HashMap<Camera, Transform> = HashMap::new();
-        cameras.insert(Camera::Map, Transform::new());
-        Cameras { cameras }
+        let mut cameras: HashMap<CameraId, Camera> = HashMap::new();
+        cameras.insert(CameraId::Map, Camera::new());
+        CameraManager { cameras }
     }
 
-    pub fn get_transform(&mut self, key: Camera) -> &mut Transform {
-        self.cameras.entry(key).or_insert_with(|| Transform::new())
+    pub fn get_camera(&mut self, key: CameraId) -> &mut Camera {
+        self.cameras.entry(key).or_insert_with(|| Camera::new())
     }
 
     pub fn get_drawparam<P: Position>(
         &self,
-        key: &Camera,
+        key: &CameraId,
         position: &P,
     ) -> ggez::graphics::DrawParam {
-        if let Some(transform) = self.cameras.get(key) {
+        if let Some(camera) = self.cameras.get(key) {
             ggez::graphics::DrawParam::default()
                 .dest(self.transform_position(key, position))
                 .scale(mint::Vector2::<f32> {
-                    x: transform.scale,
-                    y: transform.scale,
+                    x: camera.scale,
+                    y: camera.scale,
                 })
         } else {
             ggez::graphics::DrawParam::default()
         }
     }
 
-    pub fn transform_position<P: Position>(&self, key: &Camera, position: &P) -> mint::Point2<f32> {
+    pub fn transform_position<P: Position>(&self, key: &CameraId, position: &P) -> mint::Point2<f32> {
         // Converts position from camera to screen position
 
-        if let Some(transform) = self.cameras.get(key) {
+        if let Some(camera) = self.cameras.get(key) {
             mint::Point2::<f32> {
-                x: position.x() * transform.scale + transform.dest.x,
-                y: position.y() * transform.scale + transform.dest.y,
+                x: position.x() * camera.scale + camera.dest.x,
+                y: position.y() * camera.scale + camera.dest.y,
             }
         } else {
             mint::Point2::<f32> {
@@ -61,13 +61,13 @@ impl Cameras {
     pub fn inv_transform_position<P: Position>(
         // Converts position from screen position to camera position
         &self,
-        key: &Camera,
+        key: &CameraId,
         position: &P,
     ) -> mint::Point2<f32> {
-        if let Some(transform) = self.cameras.get(key) {
+        if let Some(camera) = self.cameras.get(key) {
             mint::Point2::<f32> {
-                x: (position.x() - transform.dest.x) / transform.scale,
-                y: (position.y() - transform.dest.y) / transform.scale,
+                x: (position.x() - camera.dest.x) / camera.scale,
+                y: (position.y() - camera.dest.y) / camera.scale,
             }
         } else {
             mint::Point2::<f32> {
@@ -80,19 +80,19 @@ impl Cameras {
     pub fn is_within<P: Position>
     (
         &self,
-        key: &Camera,
+        key: &CameraId,
         position: &P) -> bool
         {
-            self.cameras.get(key).map_or(false, |transform| {
-                position.x() > transform.camera_position.x &&
-                position.x() < transform.camera_position.x + transform.camera_width_and_height.x &&
-                position.y() > transform.camera_position.y &&
-                position.y() < transform.camera_position.y + transform.camera_width_and_height.y
+            self.cameras.get(key).map_or(false, |camera| {
+                position.x() > camera.position.x &&
+                position.x() < camera.position.x + camera.width_and_height.x &&
+                position.y() > camera.position.y &&
+                position.y() < camera.position.y + camera.width_and_height.y
             })
         }
 }
 
-pub struct Transform {
+pub struct Camera {
     pub dest: mint::Point2<f32>,
     pub scale: f32,
 
@@ -102,21 +102,21 @@ pub struct Transform {
     pub scale_min: f32,
     pub scale_max: f32,
 
-    pub camera_position: mint::Point2<f32>,
-    pub camera_width_and_height: mint::Point2<f32>,
+    pub position: mint::Point2<f32>,
+    pub width_and_height: mint::Point2<f32>,
 }
 
-impl Transform {
+impl Camera {
     pub fn new() -> Self {
-        Transform {
+        Camera {
             dest: mint::Point2::<f32> { x: 0.0, y: 0.0 },
             scale: 1.0,
             dest_min: mint::Point2::<f32> { x: 0.0, y: 0.0 },
             dest_max: mint::Point2::<f32> { x: 0.0, y: 0.0 },
             scale_min: 1.0,
             scale_max: 1.0,
-            camera_position: mint::Point2::<f32> {x: 0.0, y: 0.0},
-            camera_width_and_height: mint::Point2::<f32> {x: 1.0, y: 1.0},
+            position: mint::Point2::<f32> {x: 0.0, y: 0.0},
+            width_and_height: mint::Point2::<f32> {x: 1.0, y: 1.0},
         }
     }
 
@@ -131,7 +131,7 @@ impl Transform {
         window_size: &P,
         image_size: &T,
     ) -> &mut Self {
-        self.camera_width_and_height = mint::Point2{x: window_size.x(), y: window_size.y()};
+        self.width_and_height = mint::Point2{x: window_size.x(), y: window_size.y()};
 
         self.scale_min = (window_size.x() / image_size.x()).max(window_size.y() / image_size.y());
         self.scale_max = self.scale_min * 5.0;
@@ -160,9 +160,9 @@ impl Transform {
         let scale_ratio = self.scale / prev_scale;
 
         self.dest_min.x =
-            (self.camera_width_and_height.x - (self.camera_width_and_height.x - self.dest_min.x()) * scale_ratio).min(0.0);
+            (self.width_and_height.x - (self.width_and_height.x - self.dest_min.x()) * scale_ratio).min(0.0);
         self.dest_min.y =
-            (self.camera_width_and_height.y - (self.camera_width_and_height.y - self.dest_min.y()) * scale_ratio).min(0.0);
+            (self.width_and_height.y - (self.width_and_height.y - self.dest_min.y()) * scale_ratio).min(0.0);
 
         self.dest.x = (-(zoom_target.x() - self.dest.x()) * scale_ratio + zoom_target.x())
             .clamp(self.dest_min.x(), self.dest_max.x());
