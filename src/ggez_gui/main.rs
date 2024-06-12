@@ -33,7 +33,6 @@ struct MainState {
     images: HashMap<String, graphics::Image>,
     project_state: ProjectState,
     camera_manager: CameraManager,
-    map_to_draw: MapId,
 }
 
 impl MainState {
@@ -41,14 +40,55 @@ impl MainState {
         Ok(MainState {
             images: HashMap::<String, graphics::Image>::new(),
             project_state: ProjectState::load(Path::new("./Projects/test")),
-            camera_manager: CameraManager::setup(),
-            map_to_draw: MapId::new(rand::random()),
+            camera_manager: CameraManager::new(),
         })
     }
     fn get_image(&mut self, ctx: &Context, path: &String) -> &graphics::Image {
         self.images
             .entry(path.clone())
             .or_insert_with(|| graphics::Image::from_path(ctx, path).unwrap())
+    }
+
+    fn set_current_map(&mut self, ctx: &Context, map_id: MapId)
+    {
+        self.project_state
+            .map_history_stack
+            .push(self.project_state.current_map.clone());
+        self.project_state.current_map = map_id;
+        let image_size = get_image_size(
+            self.get_image(ctx, &self.project_state.current_map().image.clone()),
+        );
+
+        self.camera_manager
+            .get_camera(CameraId::Map)
+            .set_limits(&ctx.gfx.drawable_size(), &image_size)
+            .zoom_out();
+        
+        self.project_state.current_map().parent_id.clone().map(|parent_id| {
+            let parent_size = get_image_size(
+                self.get_image(
+                    ctx,
+                    &self
+                        .project_state
+                        .maps
+                        .get(&parent_id)
+                        .unwrap()
+                        .image
+                        .clone(),
+                ),
+            );
+            self.camera_manager
+                .get_camera(CameraId::ParentMap)
+                .set_limits(
+                    &(
+                        ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
+                        ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
+                    ),
+                    &parent_size,
+                )
+                .zoom_out();
+        }
+    );
     }
 }
 
@@ -72,20 +112,14 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 })
                 .map(|(_, hovered_marker)| hovered_marker.map_id.clone())
             {
-                self.project_state
-                    .map_history_stack
-                    .push(self.project_state.current_map.clone());
-                self.project_state.current_map = map_id.clone();
+                self.set_current_map(ctx, map_id)
             }
 
-            // This is currently buggy - if a marker is beneath the parent of either the current map or the target map, this clause will fail because of the change above.
+            // This is currently buggy - if a marker is beneath the parent of either the current map or the target map, this clause will fail because of the change made above.
             self.project_state.current_map().parent_id.clone()
                 .filter(|_| self.camera_manager.is_within(&CameraId::ParentMap, &mouse_pos))
                 .map(|parent_id|{
-                    self.project_state
-                        .map_history_stack
-                        .push(self.project_state.current_map.clone());
-                    self.project_state.current_map = parent_id;
+                    self.set_current_map(ctx, parent_id);
             });
         }
         if ctx
@@ -116,48 +150,9 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let mut canvas =
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
 
-        if self.map_to_draw != self.project_state.current_map {
-            self.map_to_draw = self.project_state.current_map.clone();
-
-            let image_size = get_image_size(
-                self.get_image(ctx, &self.project_state.current_map().image.clone()),
-            );
-
-            self.camera_manager
-                .get_camera(CameraId::Map)
-                .set_limits(&ctx.gfx.drawable_size(), &image_size)
-                .zoom_out();
-            
-            self.project_state.current_map().parent_id.clone().map(|parent_id| {
-                let parent_size = get_image_size(
-                    self.get_image(
-                        ctx,
-                        &self
-                            .project_state
-                            .maps
-                            .get(&parent_id)
-                            .unwrap()
-                            .image
-                            .clone(),
-                    ),
-                );
-                self.camera_manager
-                    .get_camera(CameraId::ParentMap)
-                    .set_limits(
-                        &(
-                            ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
-                            ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
-                        ),
-                        &parent_size,
-                    )
-                    .zoom_out();
-            }
-        );
-    }
-
         let map_param = self
             .camera_manager
-            .get_drawparam(&CameraId::Map, &mint::Point2::<f32> { x: 0.0, y: 0.0 });
+            .get_draw_param(&CameraId::Map, &mint::Point2::<f32> { x: 0.0, y: 0.0 });
         let image = self.get_image(ctx, &self.project_state.current_map().image.clone());
 
         canvas.draw(image, map_param);
@@ -170,13 +165,13 @@ impl event::EventHandler<ggez::GameError> for MainState {
             canvas.draw(
                 &graphics::Image::from_path(ctx, &marker.image)?,
                 self.camera_manager
-                    .get_drawparam(&CameraId::Map, &position)
+                    .get_draw_param(&CameraId::Map, &position)
                     .offset(Point2 { x: 0.5, y: 1.0 }),
             );
         }
 
         self.project_state.current_map().parent_id.clone().map(|parent_id| {
-            let draw_param = self.camera_manager.get_drawparam(&CameraId::ParentMap, &(0.0, 0.0));
+            let draw_param = self.camera_manager.get_draw_param(&CameraId::ParentMap, &(0.0, 0.0));
             canvas.draw(
                 self.get_image(
                     ctx,

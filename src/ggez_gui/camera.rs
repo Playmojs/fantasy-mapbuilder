@@ -5,7 +5,7 @@ use ggez::{mint, winit::window};
 use crate::position::Position;
 
 pub struct CameraManager {
-    pub cameras: HashMap<CameraId, Camera>,
+    cameras: HashMap<CameraId, Camera>,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -15,17 +15,15 @@ pub enum CameraId {
 }
 
 impl CameraManager {
-    pub fn setup() -> Self {
-        let mut cameras: HashMap<CameraId, Camera> = HashMap::new();
-        cameras.insert(CameraId::Map, Camera::new());
-        CameraManager { cameras }
+    pub fn new() -> Self {
+        CameraManager { cameras: HashMap::<CameraId, Camera>::new() }
     }
 
     pub fn get_camera(&mut self, key: CameraId) -> &mut Camera {
         self.cameras.entry(key).or_insert_with(|| Camera::new())
     }
 
-    pub fn get_drawparam<P: Position>(
+    pub fn get_draw_param<P: Position>(
         &self,
         key: &CameraId,
         position: &P,
@@ -42,8 +40,8 @@ impl CameraManager {
         }
     }
 
+    /// Converts position from camera to screen position
     pub fn transform_position<P: Position>(&self, key: &CameraId, position: &P) -> mint::Point2<f32> {
-        // Converts position from camera to screen position
 
         if let Some(camera) = self.cameras.get(key) {
             mint::Point2::<f32> {
@@ -58,8 +56,8 @@ impl CameraManager {
         }
     }
 
+    /// Converts position from screen position to camera position
     pub fn inv_transform_position<P: Position>(
-        // Converts position from screen position to camera position
         &self,
         key: &CameraId,
         position: &P,
