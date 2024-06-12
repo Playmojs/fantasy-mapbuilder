@@ -131,20 +131,20 @@ impl Camera {
     ) -> &mut Self {
         self.width_and_height = mint::Point2{x: window_size.x(), y: window_size.y()};
 
-        self.scale_min = (window_size.x() / image_size.x()).max(window_size.y() / image_size.y());
+        self.scale_min = (window_size.x() / image_size.x()).min(window_size.y() / image_size.y());
         self.scale_max = self.scale_min * 5.0;
 
         self.dest_max = mint::Point2 { x: 0.0, y: 0.0 };
         self.dest_min = mint::Point2 {
-            x: (window_size.x() - self.scale_min * image_size.x()).min(0.0),
-            y: (window_size.y() - self.scale_min * image_size.y()).min(0.0),
+            x: (window_size.x() - self.scale_min * image_size.x()),
+            y: (window_size.y() - self.scale_min * image_size.y()),
         };
         self
     }
 
     pub fn pan<P: Position>(&mut self, movement: &P) {
-        self.dest.x = (self.dest.x + movement.x()).clamp(self.dest_min.x, self.dest_max.x);
-        self.dest.y = (self.dest.y + movement.y()).clamp(self.dest_min.y, self.dest_max.y);
+        self.dest.x = (self.dest.x + movement.x()).clamp(self.dest_min.x.min(0.0), self.dest_max.x);
+        self.dest.y = (self.dest.y + movement.y()).clamp(self.dest_min.y.min(0.0), self.dest_max.y);
     }
 
     pub fn zoom<P: Position>(
@@ -158,13 +158,13 @@ impl Camera {
         let scale_ratio = self.scale / prev_scale;
 
         self.dest_min.x =
-            (self.width_and_height.x - (self.width_and_height.x - self.dest_min.x()) * scale_ratio).min(0.0);
+            self.width_and_height.x - (self.width_and_height.x - self.dest_min.x()) * scale_ratio;
         self.dest_min.y =
-            (self.width_and_height.y - (self.width_and_height.y - self.dest_min.y()) * scale_ratio).min(0.0);
+            self.width_and_height.y - (self.width_and_height.y - self.dest_min.y()) * scale_ratio;
 
         self.dest.x = (-(zoom_target.x() - self.dest.x()) * scale_ratio + zoom_target.x())
-            .clamp(self.dest_min.x(), self.dest_max.x());
+            .clamp(self.dest_min.x().min(0.0), self.dest_max.x());
         self.dest.y = (-(zoom_target.y() - self.dest.y()) * scale_ratio + zoom_target.y())
-            .clamp(self.dest_min.y(), self.dest_max.y());
+            .clamp(self.dest_min.y().min(0.0), self.dest_max.y());
     }
 }
