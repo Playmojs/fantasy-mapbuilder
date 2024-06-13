@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ggez::{mint, winit::window};
+use ggez::mint;
 
 use crate::position::Position;
 
@@ -16,11 +16,13 @@ pub enum CameraId {
 
 impl CameraManager {
     pub fn new() -> Self {
-        CameraManager { cameras: HashMap::<CameraId, Camera>::new() }
+        CameraManager {
+            cameras: HashMap::<CameraId, Camera>::new(),
+        }
     }
 
     pub fn get_camera(&mut self, key: CameraId) -> &mut Camera {
-        self.cameras.entry(key).or_insert_with(|| Camera::new())
+        self.cameras.entry(key).or_insert_with(Camera::new)
     }
 
     pub fn get_draw_param<P: Position>(
@@ -41,8 +43,11 @@ impl CameraManager {
     }
 
     /// Converts position from camera to screen position
-    pub fn transform_position<P: Position>(&self, key: &CameraId, position: &P) -> mint::Point2<f32> {
-
+    pub fn transform_position<P: Position>(
+        &self,
+        key: &CameraId,
+        position: &P,
+    ) -> mint::Point2<f32> {
         if let Some(camera) = self.cameras.get(key) {
             mint::Point2::<f32> {
                 x: position.x() * camera.scale + camera.dest.x,
@@ -75,19 +80,14 @@ impl CameraManager {
         }
     }
 
-    pub fn is_within<P: Position>
-    (
-        &self,
-        key: &CameraId,
-        position: &P) -> bool
-        {
-            self.cameras.get(key).map_or(false, |camera| {
-                position.x() > camera.position.x &&
-                position.x() < camera.position.x + camera.width_and_height.x &&
-                position.y() > camera.position.y &&
-                position.y() < camera.position.y + camera.width_and_height.y
-            })
-        }
+    pub fn is_within<P: Position>(&self, key: &CameraId, position: &P) -> bool {
+        self.cameras.get(key).map_or(false, |camera| {
+            position.x() > camera.position.x
+                && position.x() < camera.position.x + camera.width_and_height.x
+                && position.y() > camera.position.y
+                && position.y() < camera.position.y + camera.width_and_height.y
+        })
+    }
 }
 
 pub struct Camera {
@@ -113,8 +113,8 @@ impl Camera {
             dest_max: mint::Point2::<f32> { x: 0.0, y: 0.0 },
             scale_min: 1.0,
             scale_max: 1.0,
-            position: mint::Point2::<f32> {x: 0.0, y: 0.0},
-            width_and_height: mint::Point2::<f32> {x: 1.0, y: 1.0},
+            position: mint::Point2::<f32> { x: 0.0, y: 0.0 },
+            width_and_height: mint::Point2::<f32> { x: 1.0, y: 1.0 },
         }
     }
 
@@ -129,7 +129,10 @@ impl Camera {
         window_size: &P,
         image_size: &T,
     ) -> &mut Self {
-        self.width_and_height = mint::Point2{x: window_size.x(), y: window_size.y()};
+        self.width_and_height = mint::Point2 {
+            x: window_size.x(),
+            y: window_size.y(),
+        };
 
         self.scale_min = (window_size.x() / image_size.x()).min(window_size.y() / image_size.y());
         self.scale_max = self.scale_min * 5.0;
@@ -147,11 +150,7 @@ impl Camera {
         self.dest.y = (self.dest.y + movement.y()).clamp(self.dest_min.y.min(0.0), self.dest_max.y);
     }
 
-    pub fn zoom<P: Position>(
-        &mut self,
-        zoom_increment: &f32,
-        zoom_target: &P,
-    ) {
+    pub fn zoom<P: Position>(&mut self, zoom_increment: &f32, zoom_target: &P) {
         let prev_scale = self.scale;
         self.scale = (self.scale * zoom_increment).clamp(self.scale_min, self.scale_max);
 
