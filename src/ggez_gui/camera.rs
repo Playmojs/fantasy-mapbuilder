@@ -12,6 +12,7 @@ pub struct CameraManager {
 pub enum CameraId {
     Map,
     ParentMap,
+    TextWindow,
 }
 
 impl CameraManager {
@@ -120,21 +121,23 @@ impl Camera {
 
     pub fn zoom_out(&mut self) -> &mut Self {
         self.scale = self.scale_min;
-        self.dest = mint::Point2 { x: 0.0, y: 0.0 };
+        self.dest = self.position;
         self
     }
 
-    pub fn set_limits<P: Position, T: Position>(
+    pub fn set_limits<P: Position, T: Position, Q: Position>(
         &mut self,
         window_size: &P,
         image_size: &T,
+        origin: &Q,
     ) -> &mut Self {
+        self.position = mint::Point2{x: origin.x(), y: origin.y()};
         self.width_and_height = mint::Point2{x: window_size.x(), y: window_size.y()};
 
         self.scale_min = (window_size.x() / image_size.x()).min(window_size.y() / image_size.y());
         self.scale_max = self.scale_min * 5.0;
 
-        self.dest_max = mint::Point2 { x: 0.0, y: 0.0 };
+        self.dest_max = self.position;
         self.dest_min = mint::Point2 {
             x: (window_size.x() - self.scale_min * image_size.x()),
             y: (window_size.y() - self.scale_min * image_size.y()),
@@ -142,18 +145,41 @@ impl Camera {
         self
     }
 
-    pub fn pan<P: Position>(&mut self, movement: &P) {
+    pub fn scale_to_fit_horizontal<P: Position, T: Position, Q: Position>(
+        &mut self,
+        window_size: &P,
+        image_size: &T,
+        origin: &Q,
+    ) -> &mut Self {
+        self.position = mint::Point2{x: origin.x(), y: origin.y()};
+        self.width_and_height = mint::Point2{x: window_size.x(), y: window_size.y()};
+
+        self.scale = window_size.x() / image_size.x();
+
+        self.dest_max = self.position;
+        self.dest_min = mint::Point2 {
+            x: window_size.x() - self.scale * image_size.x() + self.position.x,
+            y: window_size.y() - self.scale * image_size.y() + self.position.y,
+        };
+        self.dest = self.position;
+        self
+    }
+
+    pub fn pan<P: Position>(&mut self, movement: &P) -> &mut Self {
         self.dest.x = (self.dest.x + movement.x()).clamp(self.dest_min.x.min(0.0), self.dest_max.x);
         self.dest.y = (self.dest.y + movement.y()).clamp(self.dest_min.y.min(0.0), self.dest_max.y);
+        self
     }
 
     pub fn zoom<P: Position>(
         &mut self,
         zoom_increment: &f32,
         zoom_target: &P,
-    ) {
+        apply_clamp: bool
+    ) -> &mut Self{
         let prev_scale = self.scale;
-        self.scale = (self.scale * zoom_increment).clamp(self.scale_min, self.scale_max);
+        self.scale = self.scale * zoom_increment;
+        if apply_clamp{self.scale = self.scale.clamp(self.scale_min, self.scale_max)};
 
         let scale_ratio = self.scale / prev_scale;
 
@@ -166,5 +192,6 @@ impl Camera {
             .clamp(self.dest_min.x().min(0.0), self.dest_max.x());
         self.dest.y = (-(zoom_target.y() - self.dest.y()) * scale_ratio + zoom_target.y())
             .clamp(self.dest_min.y().min(0.0), self.dest_max.y());
+        self
     }
 }
