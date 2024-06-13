@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ggez::{mint, winit::window};
+use ggez::mint;
 
 use crate::position::Position;
 
@@ -17,11 +17,13 @@ pub enum CameraId {
 
 impl CameraManager {
     pub fn new() -> Self {
-        CameraManager { cameras: HashMap::<CameraId, Camera>::new() }
+        CameraManager {
+            cameras: HashMap::<CameraId, Camera>::new(),
+        }
     }
 
     pub fn get_camera(&mut self, key: CameraId) -> &mut Camera {
-        self.cameras.entry(key).or_insert_with(|| Camera::new())
+        self.cameras.entry(key).or_insert_with(Camera::new)
     }
 
     pub fn get_draw_param<P: Position>(
@@ -42,8 +44,11 @@ impl CameraManager {
     }
 
     /// Converts position from camera to screen position
-    pub fn transform_position<P: Position>(&self, key: &CameraId, position: &P) -> mint::Point2<f32> {
-
+    pub fn transform_position<P: Position>(
+        &self,
+        key: &CameraId,
+        position: &P,
+    ) -> mint::Point2<f32> {
         if let Some(camera) = self.cameras.get(key) {
             mint::Point2::<f32> {
                 x: position.x() * camera.scale + camera.dest.x,
@@ -76,19 +81,14 @@ impl CameraManager {
         }
     }
 
-    pub fn is_within<P: Position>
-    (
-        &self,
-        key: &CameraId,
-        position: &P) -> bool
-        {
-            self.cameras.get(key).map_or(false, |camera| {
-                position.x() > camera.position.x &&
-                position.x() < camera.position.x + camera.width_and_height.x &&
-                position.y() > camera.position.y &&
-                position.y() < camera.position.y + camera.width_and_height.y
-            })
-        }
+    pub fn is_within<P: Position>(&self, key: &CameraId, position: &P) -> bool {
+        self.cameras.get(key).map_or(false, |camera| {
+            position.x() > camera.position.x
+                && position.x() < camera.position.x + camera.width_and_height.x
+                && position.y() > camera.position.y
+                && position.y() < camera.position.y + camera.width_and_height.y
+        })
+    }
 }
 
 pub struct Camera {
@@ -114,8 +114,8 @@ impl Camera {
             dest_max: mint::Point2::<f32> { x: 0.0, y: 0.0 },
             scale_min: 1.0,
             scale_max: 1.0,
-            position: mint::Point2::<f32> {x: 0.0, y: 0.0},
-            width_and_height: mint::Point2::<f32> {x: 1.0, y: 1.0},
+            position: mint::Point2::<f32> { x: 0.0, y: 0.0 },
+            width_and_height: mint::Point2::<f32> { x: 1.0, y: 1.0 },
         }
     }
 
@@ -131,8 +131,14 @@ impl Camera {
         image_size: &T,
         origin: &Q,
     ) -> &mut Self {
-        self.position = mint::Point2{x: origin.x(), y: origin.y()};
-        self.width_and_height = mint::Point2{x: window_size.x(), y: window_size.y()};
+        self.position = mint::Point2 {
+            x: origin.x(),
+            y: origin.y(),
+        };
+        self.width_and_height = mint::Point2 {
+            x: window_size.x(),
+            y: window_size.y(),
+        };
 
         self.scale_min = (window_size.x() / image_size.x()).min(window_size.y() / image_size.y());
         self.scale_max = self.scale_min * 5.0;
@@ -151,8 +157,14 @@ impl Camera {
         image_size: &T,
         origin: &Q,
     ) -> &mut Self {
-        self.position = mint::Point2{x: origin.x(), y: origin.y()};
-        self.width_and_height = mint::Point2{x: window_size.x(), y: window_size.y()};
+        self.position = mint::Point2 {
+            x: origin.x(),
+            y: origin.y(),
+        };
+        self.width_and_height = mint::Point2 {
+            x: window_size.x(),
+            y: window_size.y(),
+        };
 
         self.scale = window_size.x() / image_size.x();
 
@@ -175,11 +187,13 @@ impl Camera {
         &mut self,
         zoom_increment: &f32,
         zoom_target: &P,
-        apply_clamp: bool
-    ) -> &mut Self{
+        apply_clamp: bool,
+    ) -> &mut Self {
         let prev_scale = self.scale;
-        self.scale = self.scale * zoom_increment;
-        if apply_clamp{self.scale = self.scale.clamp(self.scale_min, self.scale_max)};
+        self.scale *= zoom_increment;
+        if apply_clamp {
+            self.scale = self.scale.clamp(self.scale_min, self.scale_max)
+        };
 
         let scale_ratio = self.scale / prev_scale;
 

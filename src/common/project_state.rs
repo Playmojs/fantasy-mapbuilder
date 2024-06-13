@@ -1,6 +1,5 @@
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, ffi::OsStr, fs, io::BufReader, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 use crate::{
     file_type::{get_file_type, get_filename, FileType},

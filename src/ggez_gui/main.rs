@@ -1,16 +1,10 @@
-use std::{
-    borrow::Borrow,
-    collections::{hash_map::Entry, HashMap},
-    marker,
-    path::Path,
-};
+use std::{collections::HashMap, path::Path};
 mod config;
-use camera::{Camera, CameraId, CameraManager};
+use camera::{CameraId, CameraManager};
 use common::{ids::MapId, project_state::ProjectState};
 use config::{MARKER_SIZE, PARENT_MAP_X_RATIO};
 use ggez::{
-    context::{Has, HasMut},
-    event::{self, Button},
+    event,
     glam::Vec2,
     graphics::{self, DrawParam, FillOptions},
     mint::{self, Point2, Vector2},
@@ -48,28 +42,26 @@ impl MainState {
             text_manager: TextManager::new(),
         })
     }
-    fn get_image(&mut self, ctx: & Context, path: &String) -> &graphics::Image {
+    fn get_image(&mut self, ctx: &Context, path: &String) -> &graphics::Image {
         self.images
             .entry(path.clone())
             .or_insert_with(|| graphics::Image::from_path(ctx, path).unwrap())
     }
 
-    fn set_current_map(&mut self, ctx: &Context, map_id: MapId)
-    {
+    fn set_current_map(&mut self, ctx: &Context, map_id: MapId) {
         self.project_state
             .map_history_stack
             .push(self.project_state.current_map.clone());
         self.project_state.current_map = map_id;
-        let image_size = get_image_size(
-            self.get_image(ctx, &self.project_state.current_map().image.clone()),
-        );
+        let image_size =
+            get_image_size(self.get_image(ctx, &self.project_state.current_map().image.clone()));
 
         self.camera_manager
             .get_camera(CameraId::Map)
             .set_limits(&ctx.gfx.drawable_size(), &image_size, &(0.0, 0.0))
             .zoom_out();
-        
-        self.project_state.current_map().parent_id.clone().map(|parent_id| {
+
+        if let Some(parent_id) = self.project_state.current_map().parent_id.clone() {
             let parent_size = get_image_size(
                 self.get_image(
                     ctx,
@@ -89,20 +81,23 @@ impl MainState {
                         ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
                         ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
                     ),
-                    &parent_size, 
+                    &parent_size,
                     &(0.0, 0.0),
                 )
                 .zoom_out();
-            }
-        );
+        }
         self.text_manager
             .set_text(&self.project_state.current_map().map_info.content)
-            .set_bounds(&(ctx.gfx.size().0*0.3, ctx.gfx.size().1*10000000.0))
+            .set_bounds(&(ctx.gfx.size().0 * 0.3, ctx.gfx.size().1 * 10000000.0))
             .set_textbox_size(ctx, 100.0);
 
         self.camera_manager
             .get_camera(CameraId::TextWindow)
-            .scale_to_fit_horizontal(&(ctx.gfx.size().0*0.3, ctx.gfx.size().1*0.7), &self.text_manager.textbox_size, &(ctx.gfx.size().0*0.7,  ctx.gfx.size().1*0.3));
+            .scale_to_fit_horizontal(
+                &(ctx.gfx.size().0 * 0.3, ctx.gfx.size().1 * 0.7),
+                &self.text_manager.textbox_size,
+                &(ctx.gfx.size().0 * 0.7, ctx.gfx.size().1 * 0.3),
+            );
     }
 }
 
@@ -130,11 +125,14 @@ impl event::EventHandler<ggez::GameError> for MainState {
             }
 
             // This is currently buggy - if a marker is beneath the parent of either the current map or the target map, this clause will fail because of the change made above.
-            self.project_state.current_map().parent_id.clone()
-                .filter(|_| self.camera_manager.is_within(&CameraId::ParentMap, &mouse_pos))
-                .map(|parent_id|{
+            if let Some(parent_id) = self.project_state.current_map().parent_id.clone() {
+                if self
+                    .camera_manager
+                    .is_within(&CameraId::ParentMap, &mouse_pos)
+                {
                     self.set_current_map(ctx, parent_id);
-            });
+                }
+            }
         }
         if ctx
             .keyboard
@@ -161,8 +159,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        let mut canvas =
-            graphics::Canvas::from_frame(ctx, graphics::Color::from_rgb(35, 35, 35));
+        let mut canvas = graphics::Canvas::from_frame(ctx, graphics::Color::from_rgb(35, 35, 35));
 
         let map_param = self
             .camera_manager
@@ -171,7 +168,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
 
         canvas.draw(image, map_param);
 
-        for (_, marker) in &self.project_state.current_map().markers {
+        for marker in self.project_state.current_map().markers.values() {
             let position = mint::Point2::<f32> {
                 x: marker.position.x,
                 y: marker.position.y,
@@ -184,8 +181,10 @@ impl event::EventHandler<ggez::GameError> for MainState {
             );
         }
 
-        self.project_state.current_map().parent_id.clone().map(|parent_id| {
-            let draw_param = self.camera_manager.get_draw_param(&CameraId::ParentMap, &(0.0, 0.0));
+        if let Some(parent_id) = self.project_state.current_map().parent_id.clone() {
+            let draw_param = self
+                .camera_manager
+                .get_draw_param(&CameraId::ParentMap, &(0.0, 0.0));
             canvas.draw(
                 self.get_image(
                     ctx,
@@ -199,12 +198,27 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 ),
                 draw_param,
             );
-        });
+        }
 
-        canvas.draw(&graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::Fill(FillOptions::DEFAULT), graphics::Rect::new(0.0, 0.0, ctx.gfx.size().0, ctx.gfx.size().1), graphics::Color::from_rgb(35, 35, 35)).ok().unwrap(), self.camera_manager.get_draw_param(&CameraId::TextWindow, &(0.0, 0.0)));
-        canvas.draw(self.text_manager.text_handler.set_scale(graphics::PxScale{x: 30.0, y: 30.0}),
-            self.camera_manager.get_draw_param(&CameraId::TextWindow, &(20.0, 20.0)));
-
+        canvas.draw(
+            &graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::Fill(FillOptions::DEFAULT),
+                graphics::Rect::new(0.0, 0.0, ctx.gfx.size().0, ctx.gfx.size().1),
+                graphics::Color::from_rgb(35, 35, 35),
+            )
+            .ok()
+            .unwrap(),
+            self.camera_manager
+                .get_draw_param(&CameraId::TextWindow, &(0.0, 0.0)),
+        );
+        canvas.draw(
+            self.text_manager
+                .text_handler
+                .set_scale(graphics::PxScale { x: 30.0, y: 30.0 }),
+            self.camera_manager
+                .get_draw_param(&CameraId::TextWindow, &(20.0, 20.0)),
+        );
 
         canvas.finish(ctx)?;
 
@@ -212,17 +226,20 @@ impl event::EventHandler<ggez::GameError> for MainState {
     }
 
     fn mouse_wheel_event(&mut self, ctx: &mut Context, _x: f32, y: f32) -> GameResult {
-        if self.camera_manager.is_within(&CameraId::TextWindow, &ctx.mouse.position())
+        if self
+            .camera_manager
+            .is_within(&CameraId::TextWindow, &ctx.mouse.position())
         {
             self.camera_manager
                 .get_camera(CameraId::TextWindow)
                 .pan(&(0.0, 75.0 * y));
-        }
-        else {
+        } else {
             self.camera_manager.get_camera(CameraId::Map).zoom(
-            &(1.0 + y / 10.0),
-            &ctx.mouse.position(),true
-        );}
+                &(1.0 + y / 10.0),
+                &ctx.mouse.position(),
+                true,
+            );
+        }
         Ok(())
     }
 
@@ -236,9 +253,9 @@ impl event::EventHandler<ggez::GameError> for MainState {
             get_image_size(self.get_image(ctx, &self.project_state.current_map().image.clone()));
         self.camera_manager
             .get_camera(CameraId::Map)
-            .set_limits(&(width, height), &image_size,&(0.0, 0.0))
+            .set_limits(&(width, height), &image_size, &(0.0, 0.0))
             .zoom_out();
-        self.project_state.current_map().parent_id.clone().map(|parent_id| {
+        if let Some(parent_id) = self.project_state.current_map().parent_id.clone() {
             let parent_size = get_image_size(
                 self.get_image(
                     ctx,
@@ -258,18 +275,23 @@ impl event::EventHandler<ggez::GameError> for MainState {
                         ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
                         ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
                     ),
-                    &parent_size, &(0.0, 0.0)
+                    &parent_size,
+                    &(0.0, 0.0),
                 )
                 .zoom_out();
-        });
-        self.text_manager
-            .set_text(&self.project_state.current_map().map_info.content)
-            .set_bounds(&(ctx.gfx.size().0*0.3, ctx.gfx.size().1*10000000.0))
-            .set_textbox_size(ctx, 100.0);
+            self.text_manager
+                .set_text(&self.project_state.current_map().map_info.content)
+                .set_bounds(&(ctx.gfx.size().0 * 0.3, ctx.gfx.size().1 * 10000000.0))
+                .set_textbox_size(ctx, 100.0);
 
-        self.camera_manager
-            .get_camera(CameraId::TextWindow)
-            .scale_to_fit_horizontal(&(ctx.gfx.size().0*0.3, ctx.gfx.size().1*0.7), &self.text_manager.textbox_size, &(ctx.gfx.size().0*0.7,  ctx.gfx.size().1*0.3));
+            self.camera_manager
+                .get_camera(CameraId::TextWindow)
+                .scale_to_fit_horizontal(
+                    &(ctx.gfx.size().0 * 0.3, ctx.gfx.size().1 * 0.7),
+                    &self.text_manager.textbox_size,
+                    &(ctx.gfx.size().0 * 0.7, ctx.gfx.size().1 * 0.3),
+                );
+        };
         Ok(())
     }
 }
