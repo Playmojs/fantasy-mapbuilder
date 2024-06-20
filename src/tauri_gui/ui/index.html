@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.1/dist/showdown.min.js"></script>
+
+    <style>
+        #informatic {
+            background-color: rgb(47, 47, 47);
+            color: white;
+            position: fixed;
+            left: 66%;
+            right: 0%;
+            top: 25%;
+            font-size: large;
+            text-align: justify;
+            margin: 10px;
+            height: 75%;
+            overflow: scroll;
+            padding: 10px;
+        }
+
+        #map-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .marker {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .marker-image {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map-container">
+        <img id="map" alt="Map">
+    </div>
+    <script src="change_map.js"></script>
+
+    <h1 id="informatic"></h1>
+
+</body>
+
+</html>

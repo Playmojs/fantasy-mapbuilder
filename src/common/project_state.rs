@@ -121,7 +121,7 @@ pub struct MapOnFile {
     pub image: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Marker {
     pub map_id: MapId,
     pub position: Position,
@@ -141,7 +141,7 @@ impl Marker {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
