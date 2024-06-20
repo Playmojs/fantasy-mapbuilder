@@ -1,6 +1,5 @@
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, ffi::OsStr, fs, io::BufReader, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 use crate::{
     file_type::{get_file_type, get_filename, FileType},
@@ -56,6 +55,7 @@ pub struct Map {
     pub markers: HashMap<MarkerId, Marker>,
     pub map_info: MapInfo,
     pub image: String,
+    pub parent_id: Option<MapId>,
 }
 
 impl Map {
@@ -79,6 +79,7 @@ impl Map {
                 .collect(),
             map_info: map_on_file.map_info,
             image: map_on_file.image,
+            parent_id: map_on_file.parent_id,
         })
     }
 
@@ -95,6 +96,7 @@ impl Map {
             marker_ids: self.markers.keys().cloned().collect(),
             map_info: self.map_info.clone(),
             image: self.image.clone(),
+            parent_id: self.parent_id.clone(),
         }
         .save(file_path)
     }
@@ -119,6 +121,7 @@ pub struct MapOnFile {
     pub marker_ids: Vec<MarkerId>,
     pub map_info: MapInfo,
     pub image: String,
+    pub parent_id: Option<MapId>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

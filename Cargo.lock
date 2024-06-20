@@ -2115,6 +2115,7 @@ dependencies = [
  "comrak",
  "ggez",
  "itertools 0.13.0",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "slint",
