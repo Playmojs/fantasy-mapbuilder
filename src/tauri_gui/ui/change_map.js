@@ -3,6 +3,7 @@ const { invoke } = window.__TAURI__.tauri
 document.addEventListener('DOMContentLoaded', async () => {
     const mapContainer = document.getElementById('map-container');
     const _map = document.getElementById('map');
+    const _parent_map = document.getElementById('parent_map');
 
     function draw_map(map) {
         if (map === null) { return }
@@ -36,6 +37,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const converter = new showdown.Converter();
             document.getElementById("informatic").innerHTML = converter.makeHtml(map.text)
+
+            if (map.parent_image !== null) {
+                _parent_map.classList.remove('hidden');
+                _parent_map.src = "assets".concat(map.parent_image);
+                _parent_map.addEventListener('click', () => {
+                    handle_marker_click(map.parent_id.toString());
+                })
+            }
+            else {
+                _parent_map.classList.add('hidden')
+            }
         }
     }
 

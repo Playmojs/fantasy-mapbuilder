@@ -9,6 +9,12 @@
     <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.1/dist/showdown.min.js"></script>
 
     <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
         #informatic {
             background-color: rgb(47, 47, 47);
             color: white;
@@ -18,10 +24,28 @@
             top: 25%;
             font-size: large;
             text-align: justify;
-            margin: 10px;
             height: 75%;
             overflow: scroll;
             padding: 10px;
+        }
+
+        #informatic::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        #informatic::-webkit-scrollbar-track {
+            background: rgb(47, 47, 47);
+            border-radius: 10px;
+        }
+
+        #informatic::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 10px;
+            border: 3px solid rgb(47, 47, 47);
+        }
+
+        #informatic::-webkit-scrollbar-thumb:hover {
+            background-color: #888;
         }
 
         #map-container {
@@ -51,6 +75,20 @@
             background-position: center;
             pointer-events: none;
         }
+
+        #parent_map {
+            position: fixed;
+            top: 0%;
+            right: 80%;
+            width: 20%;
+            height: auto;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 
@@ -59,7 +97,7 @@
         <img id="map" alt="Map">
     </div>
     <script src="change_map.js"></script>
-
+    <img id="parent_map" class="hidden">
     <h1 id="informatic"></h1>
 
 </body>

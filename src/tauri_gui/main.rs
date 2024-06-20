@@ -14,7 +14,8 @@ struct FrontEndMap
   pub markers: Vec<Marker>,
   pub text: String,
   pub image: String,
-  pub parent_image: Option<String>
+  pub parent_image: Option<String>,
+  pub parent_id: Option<MapId>,
 }
 
 
@@ -36,7 +37,7 @@ fn set_map(project_state: State<Mutex<ProjectState>>, id: &str) -> FrontEndMap
   project_state.current_map = MapId(id);
   let map = project_state.current_map();
   let parent_string = map.parent_id.clone().map(|id| project_state.maps.get(&id).unwrap().image.clone());
-  FrontEndMap{markers: map.markers.values().cloned().collect::<Vec<Marker>>(), text: map.map_info.content.clone(), image: map.image.clone(), parent_image: parent_string}
+  FrontEndMap{markers: map.markers.values().cloned().collect::<Vec<Marker>>(), text: map.map_info.content.clone(), image: map.image.clone(), parent_image: parent_string, parent_id: map.parent_id.clone()}
 }
 
 #[tauri::command]
@@ -50,7 +51,7 @@ fn pop_map(project_state: State<Mutex<ProjectState>>) -> Option<FrontEndMap>
   project_state.current_map = current_map;
   let map = project_state.current_map();
   let parent_string = map.parent_id.clone().map(|id| project_state.maps.get(&id).unwrap().image.clone());
-  Some(FrontEndMap{markers: map.markers.values().cloned().collect::<Vec<Marker>>(), text: map.map_info.content.clone(), image: map.image.clone(), parent_image: parent_string})
+  Some(FrontEndMap{markers: map.markers.values().cloned().collect::<Vec<Marker>>(), text: map.map_info.content.clone(), image: map.image.clone(), parent_image: parent_string, parent_id: map.parent_id.clone()})
 }
 
 fn main() {
