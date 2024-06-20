@@ -50,11 +50,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        panzoom(mapContainer, {
+        var map_zoom = panzoom(mapContainer, {
             maxZoom: 5,
             minZoom: 0.7,
             bounds: true,
             boundsPadding: 0.1
+        });
+
+        _map.addEventListener('mouseenter', () => {
+            map_zoom.resume();
+        });
+
+        _map.addEventListener('mouseleave', () => {
+            map_zoom.pause();
         });
     }
 
