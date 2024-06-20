@@ -46,9 +46,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 })
             }
             else {
-                _parent_map.classList.add('hidden')
+                _parent_map.classList.add('hidden');
             }
         }
+
+        panzoom(mapContainer, {
+            maxZoom: 5,
+            minZoom: 0.7,
+            bounds: true,
+            boundsPadding: 0.1
+        });
     }
 
     async function handle_marker_click(map_id) {
