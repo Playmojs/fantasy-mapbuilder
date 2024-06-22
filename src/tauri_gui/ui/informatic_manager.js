@@ -1,4 +1,5 @@
 const { dialog } = window.__TAURI__.dialog
+const { invoke } = window.__TAURI__.tauri
 
 const state =
 {
@@ -30,6 +31,7 @@ function set_content(content) {
 function toggle_editable() {
     if (state.editable) {
         state.text = state.informatic_handle.innerText;
+        save_current_text();
     }
     state.editable = !state.editable
     draw_text(state)
@@ -46,6 +48,12 @@ async function request_change_map() {
     // else return true
 }
 
+async function save_current_text() {
+    await invoke('update_map_content', { content: state.text }).catch((error) => {
+        console.error(`Error saving content: ${error}`)
+    });
+}
+
 // window.draw_text = draw_text
 window.set_content = set_content
 window.request_change_map = request_change_map
@@ -53,7 +61,7 @@ window.request_change_map = request_change_map
 
 document.addEventListener('DOMContentLoaded', async () => {
     const edit_button = document.getElementById('edit_content_button');
-    edit_button.addEventListener('click', () => { toggle_editable() })
+    edit_button.addEventListener('click', () => { toggle_editable() });
 });
 
 

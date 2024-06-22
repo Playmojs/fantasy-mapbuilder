@@ -1,10 +1,1 @@
-{
-    "marker_ids": [
-        3
-    ],
-    "map_info": {
-        "content": ""
-    },
-    "image": "/Invella_forest.jpg",
-    "parent_id": 2
-}
+{"marker_ids":[3],"map_info":{"content":""},"image":"/Invella_forest.jpg","parent_id":2}
