@@ -86,10 +86,10 @@
             background-color: #555;
             height: 60%;
             top: 20%;
-            left: 80%;
+            left: 85%;
             width: auto;
             shape-outside: circle();
-            border-radius: 5%;
+            border-radius: 7%;
         }
 
         #edit_content_button:hover {
@@ -115,17 +115,21 @@
 
         .marker {
             position: absolute;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             cursor: pointer;
         }
 
         .marker-image {
+            position: relative;
+            bottom: 100%;
             background-size: contain;
             background-repeat: no-repeat;
-            background-position: center;
             pointer-events: none;
+            width: 75px;
+            height: 75px;
+            background-origin: initial;
         }
 
         #parent_map {

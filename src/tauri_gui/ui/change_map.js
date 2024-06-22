@@ -24,9 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 new_marker.style.left = (marker.position.x / _map.naturalWidth) * 100 + "%"
                 const marker_image = document.createElement('div');
                 marker_image.classList.add('marker-image');
-                marker_image.style.backgroundImage = `url(assets${marker.image})`; // Set the background image
-                marker_image.style.width = '60px'; // Image width
-                marker_image.style.height = '60px'; // Image height
+                marker_image.style.backgroundImage = `url(assets${marker.image})`;
 
                 new_marker.appendChild(marker_image);
                 new_marker.addEventListener('click', () => {
@@ -59,11 +57,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             minZoom: 0.7,
         });
 
-        _map.addEventListener('mouseenter', () => {
+        mapContainer.addEventListener('mouseenter', () => {
             map_zoom.resume();
         });
 
-        _map.addEventListener('mouseleave', () => {
+        mapContainer.addEventListener('mouseleave', () => {
             map_zoom.pause();
         });
     }
