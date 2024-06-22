@@ -35,8 +35,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mapContainer.appendChild(new_marker);
             });
 
-            const converter = new showdown.Converter();
-            document.getElementById("informatic").innerHTML = converter.makeHtml(map.text)
+            set_content(map.text)
+            // const converter = new showdown.Converter();
+            // document.getElementById("informatic").innerHTML = converter.makeHtml(map.text)
 
             if (map.parent_image !== null) {
                 _parent_map.classList.remove('hidden');
@@ -51,10 +52,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         var map_zoom = panzoom(mapContainer, {
-            maxZoom: 5,
-            minZoom: 0.7,
             bounds: true,
-            boundsPadding: 0.1
+            boundsPadding: 0,
+            initialZoom: 1,
+            maxZoom: 3,
+            minZoom: 0.7,
         });
 
         _map.addEventListener('mouseenter', () => {
@@ -67,25 +69,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function handle_marker_click(map_id) {
-        await invoke('set_map', { id: map_id }).then((response) => {
-            draw_map(response)
-        }).catch((error) => {
-            console.error(`Error updating markers: ${error}`);
-        })
+        if (request_change_map()) {
+            await invoke('set_map', { id: map_id }).then((response) => {
+                draw_map(response)
+            }).catch((error) => {
+                console.error(`Error updating markers: ${error}`);
+            })
+        }
     }
 
 
     async function popMap() {
-        await invoke('pop_map').then((response) => {
-            draw_map(response)
-        }).catch((error) => {
-            console.error(`Error updating markers: ${error}`);
-        })
+        if (request_change_map()) {
+            await invoke('pop_map').then((response) => {
+                draw_map(response)
+            }).catch((error) => {
+                console.error(`Error updating markers: ${error}`);
+            })
+        }
     }
 
     handle_marker_click("0")
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === "Backspace") { popMap() }
+        if (event.key === "Escape") { popMap() }
     })
 });

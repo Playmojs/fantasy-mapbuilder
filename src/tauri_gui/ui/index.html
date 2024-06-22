@@ -8,6 +8,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.1/dist/showdown.min.js"></script>
     <script src='https://unpkg.com/panzoom@9.4.0/dist/panzoom.min.js'></script>
+    <script src="informatic_manager.js" , type="module"></script>
+    <script src="change_map.js" , type="module"></script>
 
     <style>
         html,
@@ -17,18 +19,41 @@
             overflow: hidden;
         }
 
-        #informatic {
-            background-color: rgb(47, 47, 47);
-            color: white;
+        #informatic_window {
             position: fixed;
-            left: 66%;
-            right: 0%;
+            background-color: rgb(47, 47, 47);
             top: 25%;
+            left: 66%;
+            height: 75%;
+            width: 34%;
+        }
+
+
+        #informatic {
+            position: relative;
+            height: 90%;
+            /* width: 100%; */
+            left: 0px;
+            right: 0px;
+            background-color: inherit;
+            color: white;
             font-size: large;
             text-align: justify;
-            height: 75%;
             overflow: scroll;
             padding: 10px;
+            margin: 0px;
+            resize: horizontal;
+            white-space: pre-wrap;
+        }
+
+        .edit_mode #informatic {
+            background-color: white;
+            color: black;
+            margin: 10px;
+        }
+
+        .edit_mode #informatic::-webkit-scrollbar-track {
+            background: white;
         }
 
         #informatic::-webkit-scrollbar {
@@ -42,12 +67,37 @@
 
         #informatic::-webkit-scrollbar-thumb {
             background-color: #555;
-            border-radius: 10px;
-            border: 3px solid rgb(47, 47, 47);
+            /* border-radius: 10px;
+            border: 3px solid rgb(47, 47, 47); */
         }
 
         #informatic::-webkit-scrollbar-thumb:hover {
             background-color: #888;
+        }
+
+        #toolbar {
+            position: relative;
+            height: 10%;
+            width: 100%;
+        }
+
+        #edit_content_button {
+            position: relative;
+            background-color: #555;
+            height: 60%;
+            top: 20%;
+            left: 80%;
+            width: auto;
+            shape-outside: circle();
+            border-radius: 5%;
+        }
+
+        #edit_content_button:hover {
+            background-color: #888;
+        }
+
+        .edit_mode #edit_content_button {
+            background-color: #111;
         }
 
         #map-container {
@@ -98,9 +148,13 @@
     <div id="map-container">
         <img id="map" alt="Map">
     </div>
-    <script src="change_map.js"></script>
     <img id="parent_map" class="hidden">
-    <h1 id="informatic"></h1>
+    <div id="informatic_window">
+        <div id="toolbar">
+            <img id="edit_content_button" src="assets/edit-icon.png">
+        </div>
+        <div id="informatic"></div>
+    </div>
 
 </body>
 
