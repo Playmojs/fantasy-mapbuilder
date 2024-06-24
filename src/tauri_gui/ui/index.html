@@ -35,6 +35,7 @@
             /* width: 100%; */
             left: 0px;
             right: 0px;
+            bottom: 5%;
             background-color: inherit;
             color: white;
             font-size: large;
@@ -42,7 +43,6 @@
             overflow: scroll;
             padding: 10px;
             margin: 0px;
-            resize: horizontal;
             white-space: pre-wrap;
         }
 
@@ -100,6 +100,15 @@
             background-color: #111;
         }
 
+        #resizer {
+            position: relative;
+            top: 0%;
+            left: 0%;
+            cursor: nwse-resize;
+            width: 5%;
+            height: 5%;
+        }
+
         #map-container {
             position: relative;
             height: 100%;
@@ -119,6 +128,8 @@
             height: 50px;
             border-radius: 50%;
             cursor: pointer;
+            transform: translate(-50%, -50%);
+
         }
 
         .marker-image {
@@ -154,6 +165,7 @@
     </div>
     <img id="parent_map" class="hidden">
     <div id="informatic_window">
+        <div id=resizer></div>
         <div id="toolbar">
             <img id="edit_content_button" src="assets/edit-icon.png">
         </div>

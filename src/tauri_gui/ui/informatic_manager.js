@@ -62,55 +62,47 @@ window.request_change_map = request_change_map
 document.addEventListener('DOMContentLoaded', async () => {
     const edit_button = document.getElementById('edit_content_button');
     edit_button.addEventListener('click', () => { toggle_editable() });
+
+    const resizer = document.getElementById('resizer');
+    const informatic_window = document.getElementById('informatic_window');
+
+    let originalX;
+    let originalY;
+    let originalMouseX;
+    let originalMouseY;
+    let window_width;
+    let window_height;
+
+
+    resizer.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        window_width = window.innerWidth / 100;
+        window_height = window.innerHeight / 100;
+
+        originalX = informatic_window.getBoundingClientRect().left / window_width;
+        originalY = informatic_window.getBoundingClientRect().top / window_height;
+        originalMouseX = e.pageX;
+        originalMouseY = e.pageY;
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', stopResize);
+    });
+
+    function resize(e) {
+        const newX = originalX + (e.pageX - originalMouseX) / window_width;
+        const newY = originalY + (e.pageY - originalMouseY) / window_height;
+
+        informatic_window.style.left = newX + '%';
+        informatic_window.style.top = newY + '%';
+
+        informatic_window.style.width = 100 - newX + '%';
+        informatic_window.style.height = 100 - newY + '%';
+    }
+
+    function stopResize() {
+        window.removeEventListener('mousemove', resize);
+        window.removeEventListener('mouseup', stopResize);
+    }
 });
 
 
-// let dragEl
-// let dragHandleEl
-// const lastPosition = {};
 
-// setupDraggable();
-
-// function setupDraggable() {
-//     dragHandleEl = document.querySelector('informatic');
-//     dragHandleEl.addEventListener('mousedown', dragStart);
-//     dragHandleEl.addEventListener('mouseup', dragEnd);
-//     dragHandleEl.addEventListener('mouseout', dragEnd);
-// }
-
-// // function setupResizable() {
-// //     const resizeEl = document.querySelector('[data-resizable]');
-// //     resizeEl.style.setProperty('resize', 'both');
-// //     resizeEl.style.setProperty('overflow', 'hidden');
-// // }
-
-// function dragStart(event) {
-//     dragEl = getDraggableAncestor(event.target);
-//     dragEl.style.setProperty('position', 'absolute');
-//     lastPosition.left = event.target.clientX;
-//     lastPosition.top = event.target.clientY;
-//     dragHandleEl.classList.add('dragging');
-//     dragHandleEl.addEventListener('mousemove', dragMove);
-// }
-
-// function dragMove(event) {
-//     const dragElRect = dragEl.getBoundingClientRect();
-//     const newLeft = dragElRect.left + event.clientX - lastPosition.left;
-//     const newTop = dragElRect.top + event.clientY - lastPosition.top;
-//     dragEl.style.setProperty('left', `${newLeft}px`);
-//     dragEl.style.setProperty('top', `${newTop}px`);
-//     lastPosition.left = event.clientX;
-//     lastPosition.top = event.clientY;
-//     window.getSelection().removeAllRanges();
-// }
-
-// function getDraggableAncestor(element) {
-//     if (element.getAttribute('data-draggable')) return element;
-//     return getDraggableAncestor(element.parentElement);
-// }
-
-// function dragEnd() {
-//     dragHandleEl.classList.remove('dragging');
-//     dragHandleEl.removeEventListener('mousemove', dragMove);
-//     dragEl = null;
-// }
