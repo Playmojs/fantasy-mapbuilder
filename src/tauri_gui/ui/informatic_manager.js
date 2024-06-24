@@ -88,8 +88,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function resize(e) {
-        const newX = originalX + (e.pageX - originalMouseX) / window_width;
-        const newY = originalY + (e.pageY - originalMouseY) / window_height;
+        let newX = originalX + (e.pageX - originalMouseX) / window_width;
+        let newY = originalY + (e.pageY - originalMouseY) / window_height;
+
+        newY = newY > 1 ? newY : 0
+        newX = newX < 92 ? newX : 92
 
         informatic_window.style.left = newX + '%';
         informatic_window.style.top = newY + '%';
