@@ -78,8 +78,8 @@ impl MainState {
                 .get_camera(CameraId::ParentMap)
                 .set_limits(
                     &(
-                        ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
-                        ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
+                        ctx.gfx.drawable_size().0 * PARENT_MAP_X_RATIO,
+                        ctx.gfx.drawable_size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
                     ),
                     &parent_size,
                     &(0.0, 0.0),
@@ -88,15 +88,16 @@ impl MainState {
         }
         self.text_manager
             .set_text(&self.project_state.current_map().map_info.content)
-            .set_bounds(&(ctx.gfx.size().0 * 0.3, ctx.gfx.size().1 * 10000000.0))
-            .set_textbox_size(ctx, 100.0);
+            .set_bounds(&(ctx.gfx.drawable_size().0 * 0.27, ctx.gfx.drawable_size().1 * 10000000.0))
+            .set_scale(&(35.0, 35.0))
+            .set_textbox_size(ctx, 50.0);
 
         self.camera_manager
             .get_camera(CameraId::TextWindow)
             .scale_to_fit_horizontal(
-                &(ctx.gfx.size().0 * 0.3, ctx.gfx.size().1 * 0.7),
+                &(ctx.gfx.drawable_size().0 * 0.3, ctx.gfx.drawable_size().1 * 0.7),
                 &self.text_manager.textbox_size,
-                &(ctx.gfx.size().0 * 0.7, ctx.gfx.size().1 * 0.3),
+                &(ctx.gfx.drawable_size().0 * 0.7, ctx.gfx.drawable_size().1 * 0.3),
             );
     }
 }
@@ -139,7 +140,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
             .is_key_just_pressed(ggez::input::keyboard::KeyCode::Back)
         {
             if let Some(previous) = self.project_state.map_history_stack.pop() {
-                self.project_state.current_map = previous;
+                self.set_current_map(ctx, previous)
             }
         }
         if ctx
@@ -161,6 +162,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, graphics::Color::from_rgb(35, 35, 35));
 
+
+        // Draw main map
         let map_param = self
             .camera_manager
             .get_draw_param(&CameraId::Map, &mint::Point2::<f32> { x: 0.0, y: 0.0 });
@@ -168,6 +171,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
 
         canvas.draw(image, map_param);
 
+
+        // Draw markers
         for marker in self.project_state.current_map().markers.values() {
             let position = mint::Point2::<f32> {
                 x: marker.position.x,
@@ -181,6 +186,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
             );
         }
 
+        // Draw parent map
         if let Some(parent_id) = self.project_state.current_map().parent_id.clone() {
             let draw_param = self
                 .camera_manager
@@ -200,24 +206,41 @@ impl event::EventHandler<ggez::GameError> for MainState {
             );
         }
 
+        // Draw textbox - background
         canvas.draw(
             &graphics::Mesh::new_rectangle(
                 ctx,
                 graphics::DrawMode::Fill(FillOptions::DEFAULT),
-                graphics::Rect::new(0.0, 0.0, ctx.gfx.size().0, ctx.gfx.size().1),
+                graphics::Rect::new(0.0, 0.0, self.text_manager.textbox_size.x + 20.0, self.text_manager.textbox_size.y + 20.0),
                 graphics::Color::from_rgb(35, 35, 35),
             )
             .ok()
             .unwrap(),
             self.camera_manager
-                .get_draw_param(&CameraId::TextWindow, &(0.0, 0.0)),
+                .get_draw_param(&CameraId::TextWindow, &(-10.0, -10.0)),
         );
+
         canvas.draw(
-            self.text_manager
-                .text_handler
-                .set_scale(graphics::PxScale { x: 30.0, y: 30.0 }),
+            &graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::Fill(FillOptions::DEFAULT),
+                graphics::Rect::new(0.0, 0.0, self.text_manager.textbox_size.x + 20.0, self.text_manager.textbox_size.y + 20.0),
+                graphics::Color::from_rgb(35, 35, 35),
+            )
+            .ok()
+            .unwrap(),
             self.camera_manager
-                .get_draw_param(&CameraId::TextWindow, &(20.0, 20.0)),
+                .get_draw_param(&CameraId::TextWindow, &(-10.0, -10.0)),
+        );
+
+        
+
+        // Draw text
+        canvas.draw(
+         &self.text_manager
+                .text_handler,
+            self.camera_manager
+                .get_draw_param(&CameraId::TextWindow, &(0.0, 0.0)),
         );
 
         canvas.finish(ctx)?;
@@ -272,8 +295,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 .get_camera(CameraId::ParentMap)
                 .set_limits(
                     &(
-                        ctx.gfx.size().0 * PARENT_MAP_X_RATIO,
-                        ctx.gfx.size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
+                        ctx.gfx.drawable_size().0 * PARENT_MAP_X_RATIO,
+                        ctx.gfx.drawable_size().0 * PARENT_MAP_X_RATIO * parent_size.y / parent_size.x,
                     ),
                     &parent_size,
                     &(0.0, 0.0),
@@ -281,15 +304,15 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 .zoom_out();
             self.text_manager
                 .set_text(&self.project_state.current_map().map_info.content)
-                .set_bounds(&(ctx.gfx.size().0 * 0.3, ctx.gfx.size().1 * 10000000.0))
+                .set_bounds(&(ctx.gfx.drawable_size().0 * 0.3, ctx.gfx.drawable_size().1 * 10000000.0))
                 .set_textbox_size(ctx, 100.0);
 
             self.camera_manager
                 .get_camera(CameraId::TextWindow)
                 .scale_to_fit_horizontal(
-                    &(ctx.gfx.size().0 * 0.3, ctx.gfx.size().1 * 0.7),
+                    &(ctx.gfx.drawable_size().0 * 0.3, ctx.gfx.drawable_size().1 * 0.7),
                     &self.text_manager.textbox_size,
-                    &(ctx.gfx.size().0 * 0.7, ctx.gfx.size().1 * 0.3),
+                    &(ctx.gfx.drawable_size().0 * 0.7, ctx.gfx.drawable_size().1 * 0.3),
                 );
         };
         Ok(())

@@ -1,4 +1,4 @@
-use ggez::{graphics::{self, Drawable}, mint, Context};
+use ggez::{graphics::{self, Drawable, PxScale}, mint, Context};
 
 use crate::position::Position;
 
@@ -26,6 +26,12 @@ impl TextManager
     pub fn set_bounds<P: Position>(&mut self, position: &P) -> &mut Self
     {
         self.text_handler.set_bounds(mint::Vector2::<f32>{x: position.x(), y: position.y()});
+        self
+    }
+
+    pub fn set_scale<P: Position>(&mut self, position: &P) -> &mut Self
+    {
+        self.text_handler.set_scale(PxScale{x: position.x(), y: position.y()});
         self
     }
 
