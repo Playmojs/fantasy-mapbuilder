@@ -1,10 +1,1 @@
-{
-    "marker_ids": [
-        2
-    ],
-    "map_info": {
-        "content": ""
-    },
-    "image": "/Invella.jpg",
-    "parent_id": null
-}
+{"marker_ids":[2],"map_info":{"content":""},"image":"/Invella.jpg","parent_id":null}

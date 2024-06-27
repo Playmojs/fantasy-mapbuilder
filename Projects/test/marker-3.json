@@ -1,8 +1,1 @@
-{
-    "map_id": 0,
-    "position": {
-        "x": 115.0,
-        "y": 720.0
-    },
-    "image": "/marker.png"
-}
+{"map_id":0,"position":{"x":115.0,"y":720.0},"image":"/marker.png"}

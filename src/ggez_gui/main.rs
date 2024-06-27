@@ -4,11 +4,7 @@ use camera::{CameraId, CameraManager};
 use common::{ids::MapId, project_state::ProjectState};
 use config::{MARKER_SIZE, PARENT_MAP_X_RATIO};
 use ggez::{
-    event,
-    glam::Vec2,
-    graphics::{self, DrawParam, FillOptions},
-    mint::{self, Point2, Vector2},
-    Context, GameError, GameResult,
+    event, glam::Vec2, graphics::{self, DrawParam, FillOptions}, input::keyboard::{KeyCode, KeyInput, KeyMods}, mint::{self, Point2, Vector2}, Context, GameError, GameResult
 };
 use rand::Fill;
 use serde_json::{from_slice, map::OccupiedEntry};
@@ -86,19 +82,13 @@ impl MainState {
                 )
                 .zoom_out();
         }
+       
         self.text_manager
             .set_text(&self.project_state.current_map().map_info.content)
-            .set_bounds(&(ctx.gfx.drawable_size().0 * 0.27, ctx.gfx.drawable_size().1 * 10000000.0))
+            .set_bounds(ctx)
             .set_scale(&(35.0, 35.0))
-            .set_textbox_size(ctx, 50.0);
-
-        self.camera_manager
-            .get_camera(CameraId::TextWindow)
-            .scale_to_fit_horizontal(
-                &(ctx.gfx.drawable_size().0 * 0.3, ctx.gfx.drawable_size().1 * 0.7),
-                &self.text_manager.textbox_size,
-                &(ctx.gfx.drawable_size().0 * 0.7, ctx.gfx.drawable_size().1 * 0.3),
-            );
+            .compute_text_size(ctx, 50.0)
+            .arrange_camera(ctx, self.camera_manager.get_camera(CameraId::TextWindow));
     }
 }
 
@@ -137,7 +127,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
         }
         if ctx
             .keyboard
-            .is_key_just_pressed(ggez::input::keyboard::KeyCode::Back)
+            .is_key_just_pressed(ggez::input::keyboard::KeyCode::Backslash)
         {
             if let Some(previous) = self.project_state.map_history_stack.pop() {
                 self.set_current_map(ctx, previous)
@@ -207,38 +197,36 @@ impl event::EventHandler<ggez::GameError> for MainState {
         }
 
         // Draw textbox - background
-        canvas.draw(
-            &graphics::Mesh::new_rectangle(
-                ctx,
-                graphics::DrawMode::Fill(FillOptions::DEFAULT),
-                graphics::Rect::new(0.0, 0.0, self.text_manager.textbox_size.x + 20.0, self.text_manager.textbox_size.y + 20.0),
-                graphics::Color::from_rgb(35, 35, 35),
-            )
-            .ok()
-            .unwrap(),
-            self.camera_manager
-                .get_draw_param(&CameraId::TextWindow, &(-10.0, -10.0)),
-        );
-
-        canvas.draw(
-            &graphics::Mesh::new_rectangle(
-                ctx,
-                graphics::DrawMode::Fill(FillOptions::DEFAULT),
-                graphics::Rect::new(0.0, 0.0, self.text_manager.textbox_size.x + 20.0, self.text_manager.textbox_size.y + 20.0),
-                graphics::Color::from_rgb(35, 35, 35),
-            )
-            .ok()
-            .unwrap(),
-            self.camera_manager
-                .get_draw_param(&CameraId::TextWindow, &(-10.0, -10.0)),
-        );
-
         
+        canvas.draw(
+            &graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::Fill(FillOptions::DEFAULT),
+                graphics::Rect::new(0.0, 0.0, self.text_manager.text_size.0 + 20.0, self.text_manager.text_size.1 + 10.0),
+                graphics::Color::from_rgb(35, 35, 35),
+            )
+            .ok()
+            .unwrap(),
+            self.camera_manager
+                .get_draw_param(&CameraId::TextWindow, &(-10.0, -10.0)),
+        );
+
+        canvas.draw(
+            &graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::Fill(FillOptions::DEFAULT),
+                graphics::Rect::new(0.0, 0.0, self.text_manager.text_size.0 - 5.0, self.text_manager.text_size.1 - 30.0),
+                graphics::Color::from_rgb(150, 150, 150),
+            )
+            .ok()
+            .unwrap(),
+            self.camera_manager
+                .get_draw_param(&CameraId::TextWindow, &(0.0, 0.0)),
+        );
 
         // Draw text
         canvas.draw(
-         &self.text_manager
-                .text_handler,
+         &self.text_manager.text_handler,
             self.camera_manager
                 .get_draw_param(&CameraId::TextWindow, &(0.0, 0.0)),
         );
@@ -304,17 +292,56 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 .zoom_out();
             self.text_manager
                 .set_text(&self.project_state.current_map().map_info.content)
-                .set_bounds(&(ctx.gfx.drawable_size().0 * 0.3, ctx.gfx.drawable_size().1 * 10000000.0))
-                .set_textbox_size(ctx, 100.0);
-
-            self.camera_manager
-                .get_camera(CameraId::TextWindow)
-                .scale_to_fit_horizontal(
-                    &(ctx.gfx.drawable_size().0 * 0.3, ctx.gfx.drawable_size().1 * 0.7),
-                    &self.text_manager.textbox_size,
-                    &(ctx.gfx.drawable_size().0 * 0.7, ctx.gfx.drawable_size().1 * 0.3),
-                );
+                .set_bounds(ctx)
+                .compute_text_size(ctx, 100.0)
+                .arrange_camera(ctx, self.camera_manager.get_camera(CameraId::TextWindow));
         };
+        Ok(())
+    }
+
+    fn key_down_event(&mut self, ctx: &mut Context, keycode: KeyInput, _repeat: bool) -> Result<(), GameError> {
+        let keycode = keycode.keycode.unwrap();
+        match keycode {
+            KeyCode::Back => {
+                if self.text_manager.text_editor.indicator > 0 {
+                    self.text_manager.text_editor.text.remove(self.text_manager.text_editor.indicator - 1);
+                    self.text_manager.text_editor.indicator -= 1;
+                    self.text_manager.set_text_from_editor().compute_text_size(ctx, 50.0).arrange_camera(ctx, self.camera_manager.get_camera(CameraId::TextWindow));
+                }
+            }
+            KeyCode::Left => {
+                if self.text_manager.text_editor.indicator > 0 {
+                    self.text_manager.text_editor.indicator -= 1;
+                    self.text_manager.arrange_camera(ctx, self.camera_manager.get_camera(CameraId::TextWindow));
+                }
+            }
+            KeyCode::Right => {
+                if self.text_manager.text_editor.indicator < self.text_manager.text_editor.text.len() {
+                    self.text_manager.text_editor.indicator += 1;
+                    self.text_manager.arrange_camera(ctx, self.camera_manager.get_camera(CameraId::TextWindow));
+                }
+            }
+            KeyCode::End => {
+                self.text_manager.text_editor.indicator = self.text_manager.text_editor.text.len();
+                self.text_manager.arrange_camera(ctx, self.camera_manager.get_camera(CameraId::TextWindow));
+            }
+            KeyCode::Home => {
+                self.text_manager.text_editor.indicator = 0;
+                self.text_manager.arrange_camera(ctx, self.camera_manager.get_camera(CameraId::TextWindow));
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn text_input_event(&mut self, ctx: &mut Context, character: char) -> Result<(), GameError> {
+        if character != 8.into()
+        {
+            self.text_manager.text_editor.text.insert(self.text_manager.text_editor.indicator, character);
+            self.text_manager.text_editor.indicator += 1;
+
+            self.text_manager.set_text_from_editor().compute_text_size(ctx, 50.0).arrange_camera(ctx, self.camera_manager.get_camera(CameraId::TextWindow));
+        }
         Ok(())
     }
 }

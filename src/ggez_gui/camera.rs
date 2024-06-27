@@ -156,7 +156,9 @@ impl Camera {
         window_size: &P,
         image_size: &T,
         origin: &Q,
+        dest_y: f32,
     ) -> &mut Self {
+        
         self.position = mint::Point2 {
             x: origin.x(),
             y: origin.y(),
@@ -173,7 +175,8 @@ impl Camera {
             x: window_size.x() - self.scale * image_size.x() + self.position.x,
             y: window_size.y() - self.scale * image_size.y() + self.position.y,
         };
-        self.dest = self.position;
+        self.dest.x = self.position.x;
+        self.dest.y = (dest_y + self.position.y).clamp(self.dest_min.y, self.dest_max.y);
         self
     }
 
